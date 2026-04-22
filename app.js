@@ -85,49 +85,48 @@ function hideLoading() {
   setTimeout(() => ls.classList.add('hidden'), 400);
 }
 
-/* Llamada al botón "Ingresar con Google"
-   Usa Google Identity Services (GSI) para obtener un id_token.
-   El token se verifica en el Apps Script para obtener el rol. */
-function signIn() {
-  if (typeof google === 'undefined') {
-    /* Fallback para desarrollo local sin GSI cargado */
-    mockSignIn();
+/* Login con email + contraseña verificado contra la hoja "roles" del Sheet */
+async function signIn() {
+  const email = document.getElementById('login-email')?.value?.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass')?.value?.trim();
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+
+  if (!email || !pass) {
+    mostrarErrorLogin('Completá email y contraseña');
     return;
   }
-  google.accounts.id.initialize({
-    client_id: CONFIG.GOOGLE_CLIENT_ID,
-    callback: handleGoogleResponse,
-    auto_select: false,
-  });
-  google.accounts.id.prompt();
-}
 
-async function handleGoogleResponse(response) {
+  // Deshabilitar botón mientras carga
+  btn.textContent = 'Verificando…';
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+  if (err) err.style.display = 'none';
+
   try {
-    /* Enviar id_token al Apps Script para verificar y obtener rol */
-    const res = await apiCall('auth', { token: response.credential });
-    if (!res.ok) throw new Error(res.error || 'Error de autenticación');
+    const res = await apiCall('auth', { email, password: pass });
 
-    state.user = res.user; // { name, email, picture, role }
-    localStorage.setItem('siie_user', JSON.stringify(state.user));
-    await onUserAuthenticated();
-  } catch (err) {
-    alert('No se pudo autenticar. Verificá que tu cuenta tiene acceso al sistema.\n\n' + err.message);
+    if (res.ok) {
+      state.user = res.user;
+      localStorage.setItem('siie_user', JSON.stringify(state.user));
+      await onUserAuthenticated();
+    } else {
+      mostrarErrorLogin(res.error || 'Email o contraseña incorrectos');
+      btn.textContent = 'Ingresar al sistema';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    }
+  } catch (e) {
+    mostrarErrorLogin('Sin conexión. Verificá tu internet e intentá de nuevo.');
+    btn.textContent = 'Ingresar al sistema';
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
   }
 }
 
-/* Mock para desarrollo local — simula un inspector */
-function mockSignIn() {
-  const mockRoles = ['admin', 'inspector', 'viewer'];
-  const rol = mockRoles[Math.floor(Math.random() * mockRoles.length)];
-  state.user = {
-    name: 'Usuario Demo',
-    email: 'demo@siie.gob.ar',
-    picture: null,
-    role: rol,
-  };
-  localStorage.setItem('siie_user', JSON.stringify(state.user));
-  onUserAuthenticated();
+function mostrarErrorLogin(msg) {
+  const err = document.getElementById('login-error');
+  if (err) { err.textContent = msg; err.style.display = 'block'; }
 }
 
 function signOut() {

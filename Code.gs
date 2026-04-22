@@ -99,27 +99,54 @@ function doPost(e) {
 }
 
 /* ══════════════════════════════════════════════════════
-   AUTH: verificar email y devolver rol
+   AUTH: verificar email + contraseña desde la hoja roles
+   Columnas de la hoja roles: email | rol | activo | nombre | password
 ══════════════════════════════════════════════════════ */
 function authUser(token, email) {
-  /* En producción: verificar el id_token de Google con tokeninfo.
-     Para simplificar, la PWA envía el email directamente después
-     de que Google Identity Services lo autentica en el cliente. */
+  var password = token; // reutilizamos el campo token para la contraseña
+  if (!email || !password) return { ok: false, error: 'Email y contraseña requeridos' };
 
-  if (!email) return { ok: false, error: 'Email requerido' };
+  try {
+    var hoja = SS.getSheetByName(HOJAS.ROLES);
+    if (!hoja) return { ok: false, error: 'Sistema no configurado. Contactá al administrador.' };
 
-  const role = getRoleForEmail(email);
-  if (!role) return { ok: false, error: 'Usuario sin acceso al sistema' };
+    var data = hoja.getDataRange().getValues();
+    var headers = data[0];
+    var iEmail    = headers.indexOf('email');
+    var iRol      = headers.indexOf('rol');
+    var iActivo   = headers.indexOf('activo');
+    var iNombre   = headers.indexOf('nombre');
+    var iPassword = headers.indexOf('password');
 
-  return {
-    ok: true,
-    user: {
-      email: email,
-      name: email.split('@')[0], // Se reemplaza con el nombre real de Google
-      picture: null,
-      role: role,
+    for (var i = 1; i < data.length; i++) {
+      var rowEmail = String(data[i][iEmail]).toLowerCase().trim();
+      if (rowEmail !== email.toLowerCase().trim()) continue;
+
+      // Verificar activo
+      if (data[i][iActivo] !== true && data[i][iActivo] !== 'TRUE' && data[i][iActivo] !== true) {
+        return { ok: false, error: 'Usuario inactivo. Contactá al administrador.' };
+      }
+
+      // Verificar contraseña
+      var rowPass = String(data[i][iPassword]).trim();
+      if (rowPass !== password) {
+        return { ok: false, error: 'Contraseña incorrecta' };
+      }
+
+      return {
+        ok: true,
+        user: {
+          email:   rowEmail,
+          name:    data[i][iNombre] || rowEmail.split('@')[0],
+          picture: null,
+          role:    data[i][iRol] || 'viewer',
+        }
+      };
     }
-  };
+    return { ok: false, error: 'Email no encontrado. Verificá que tenés acceso al sistema.' };
+  } catch(e) {
+    return { ok: false, error: 'Error al verificar: ' + e.message };
+  }
 }
 
 function getRoleForEmail(email) {
@@ -505,7 +532,7 @@ function getRelatedRows(nombreHoja, campo, valor) {
 /* ── SETUP INICIAL: crear hojas si no existen ── */
 function setupSheets() {
   const estructura = {
-    roles:                    ['email','rol','activo','nombre'],
+    roles:                    ['email','rol','activo','nombre','password'],
     edificios:                ['id_edificio','nombre','numero_establecimiento','tipo','nivel','direccion','delegacion','localidad','latitud','longitud','foto_fachada','etapa_id','zona_id','inspector_id','telefono_fijo','email_institucional','plano_implantacion','plano_edificio','activo'],
     etapas:                   ['id_etapa','nombre','descripcion','fecha_inicio','fecha_fin','activa'],
     zonas:                    ['id_zona','etapa_id','nombre','inspector_id','descripcion'],
