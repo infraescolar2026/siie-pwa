@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0e">
+<title>SIIE · Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:#0f0f0e; --gray-700:#3a3a37; --gray-500:#6b6b66; --gray-400:#999993;
+  --gray-300:#c8c8c2; --gray-200:#e2e2dc; --gray-100:#eeede8; --gray-50:#f7f6f2;
+  --accent:#0f4c81; --accent-l:#e6eff8;
+  --ok:#1a5c3a; --ok-l:#e8f5ee; --ok-b:#1D9E75;
+  --warn:#7a4800; --warn-l:#fff3e0; --warn-b:#BA7517;
+  --danger:#8b1a1a; --danger-l:#fef2f2;
+  --font:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace; --r:10px;
+  --bar-h:48px; --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:var(--font);font-size:15px;color:var(--black);background:var(--gray-50);}
+
+.topbar{height:var(--bar-h);background:var(--black);display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:100;padding-top:env(safe-area-inset-top,0px);}
+.btn-back{background:none;border:none;color:white;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);font-size:13px;padding:0;}
+.btn-back svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.topbar-title{font-size:14px;color:#aaa;flex:1;}
+.btn-export{background:none;border:1px solid #444;border-radius:6px;color:#aaa;font-family:var(--font);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;}
+.btn-export:active{background:#222;}
+
+.content{padding:14px;max-width:680px;margin:0 auto;padding-bottom:32px;}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+.stat-card{background:white;border:1px solid var(--gray-200);border-radius:var(--r);padding:14px;}
+.stat-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
+.stat-val{font-size:30px;font-weight:600;line-height:1;margin-bottom:2px;font-family:var(--mono);}
+.stat-sub{font-size:12px;color:var(--gray-400);}
+.stat-danger .stat-val{color:#c0392b;}
+.stat-warn .stat-val{color:var(--warn-b);}
+.stat-ok .stat-val{color:var(--ok-b);}
+.stat-info .stat-val{color:var(--accent);}
+
+/* SECTION */
+.section-label{font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--gray-400);margin-bottom:10px;margin-top:4px;}
+.card{background:white;border:1px solid var(--gray-200);border-radius:var(--r);margin-bottom:12px;overflow:hidden;}
+.card-head{padding:10px 14px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:12px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-500);}
+.card-body{padding:14px;}
+
+/* CHART */
+.chart-wrap{height:180px;position:relative;margin-bottom:4px;}
+canvas{width:100% !important;}
+
+/* PATRONES */
+.patron-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--gray-100);}
+.patron-item:last-child{border-bottom:none;}
+.patron-bar-wrap{flex:1;background:var(--gray-100);border-radius:4px;height:6px;overflow:hidden;}
+.patron-bar{height:100%;border-radius:4px;background:var(--accent);transition:width 0.5s;}
+.patron-nombre{font-size:13px;font-weight:500;min-width:140px;}
+.patron-count{font-family:var(--mono);font-size:12px;color:var(--gray-400);min-width:24px;text-align:right;}
+.patron-alerta{font-size:11px;color:var(--warn-b);font-style:italic;margin-top:2px;}
+
+/* INTERVENCIONES POR ESTADO */
+.estado-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--gray-100);}
+.estado-row:last-child{border-bottom:none;}
+.estado-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.estado-nombre{font-size:13px;flex:1;}
+.estado-num{font-family:var(--mono);font-size:13px;font-weight:500;}
+
+/* DISTRIBUCIÓN TERRITORIAL */
+.zona-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--gray-100);}
+.zona-item:last-child{border-bottom:none;}
+.zona-nombre{font-size:13px;font-weight:500;flex:1;}
+.zona-bar-wrap{width:80px;background:var(--gray-100);border-radius:4px;height:6px;}
+.zona-bar{height:100%;border-radius:4px;background:var(--ok-b);}
+.zona-num{font-family:var(--mono);font-size:12px;color:var(--gray-400);min-width:20px;text-align:right;}
+
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;letter-spacing:0.04em;}
+.b-ok{background:var(--ok-l);color:var(--ok);}
+.b-warn{background:var(--warn-l);color:var(--warn);}
+.b-danger{background:var(--danger-l);color:var(--danger);}
+.b-info{background:var(--accent-l);color:var(--accent);}
+.b-neutral{background:var(--gray-100);color:var(--gray-500);}
+
+.spinner-wrap{padding:24px;display:flex;justify-content:center;}
+.spinner svg{width:24px;height:24px;stroke:var(--gray-300);fill:none;stroke-width:2;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.empty{padding:24px;text-align:center;color:var(--gray-300);font-size:13px;}
+
+@media(max-width:480px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="btn-back" onclick="history.back()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Volver
+  </button>
+  <span class="topbar-title">Dashboard de gestión</span>
+  <button class="btn-export" onclick="exportarPDF()">Exportar PDF</button>
+</div>
+
+<div class="content">
+
+  <!-- MÉTRICAS PRINCIPALES -->
+  <div class="stat-grid" id="stat-grid">
+    <div class="stat-card stat-info">
+      <div class="stat-label">Edificios relevados</div>
+      <div class="stat-val" id="d-edificios">—</div>
+      <div class="stat-sub">en el sistema</div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-label">Alumnos alcanzados</div>
+      <div class="stat-val" id="d-alumnos">—</div>
+      <div class="stat-sub">matrícula total</div>
+    </div>
+    <div class="stat-card stat-danger">
+      <div class="stat-label">Imp. pedagógico</div>
+      <div class="stat-val" id="d-imp">—</div>
+      <div class="stat-sub">problemas activos</div>
+    </div>
+    <div class="stat-card stat-warn">
+      <div class="stat-label">Intervenciones abiertas</div>
+      <div class="stat-val" id="d-int">—</div>
+      <div class="stat-sub">pendientes</div>
+    </div>
+    <div class="stat-card stat-ok">
+      <div class="stat-label">Resueltas este mes</div>
+      <div class="stat-val" id="d-ok">—</div>
+      <div class="stat-sub">finalizadas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Inspecciones</div>
+      <div class="stat-val" id="d-insp">—</div>
+      <div class="stat-sub">este mes</div>
+    </div>
+  </div>
+
+  <!-- EVOLUCIÓN DE INTERVENCIONES -->
+  <div class="section-label">Evolución mensual</div>
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Intervenciones abiertas vs resueltas</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap">
+        <canvas id="chart-evolucion"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERVENCIONES POR ESTADO -->
+  <div class="section-label">Estado actual</div>
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Intervenciones por estado</span>
+    </div>
+    <div class="card-body" id="estados-body">
+      <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+    </div>
+  </div>
+
+  <!-- PATRONES RECURRENTES -->
+  <div class="section-label">Análisis de patrones</div>
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Componentes con más fallas</span>
+      <span class="badge b-warn">Mantenimiento preventivo</span>
+    </div>
+    <div class="card-body" id="patrones-body">
+      <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+    </div>
+  </div>
+
+  <!-- DISTRIBUCIÓN TERRITORIAL -->
+  <div class="section-label">Distribución territorial</div>
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Edificios por delegación</span>
+    </div>
+    <div class="card-body" id="territorial-body">
+      <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

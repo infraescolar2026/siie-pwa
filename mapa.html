@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0e">
+<title>SIIE · Mapa</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:#0f0f0e; --gray-500:#6b6b66; --gray-400:#999993;
+  --gray-200:#e2e2dc; --gray-100:#eeede8; --gray-50:#f7f6f2;
+  --accent:#0f4c81; --accent-l:#e6eff8;
+  --ok-b:#1D9E75; --warn-b:#BA7517;
+  --font:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace;
+  --bar-h:48px; --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--font);}
+
+.topbar{
+  height:var(--bar-h);background:var(--black);
+  display:flex;align-items:center;padding:0 16px;gap:10px;
+  position:relative;z-index:1000;
+  padding-top:env(safe-area-inset-top,0px);
+}
+.btn-back{background:none;border:none;color:white;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);font-size:13px;padding:0;}
+.btn-back svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.topbar-title{font-size:14px;color:#aaa;flex:1;}
+.topbar-count{font-family:var(--mono);font-size:12px;color:#666;}
+
+#map{
+  position:absolute;
+  top:var(--bar-h);
+  left:0;right:0;
+  bottom:calc(var(--filter-h, 52px) + var(--safe-bottom));
+}
+
+/* FILTROS */
+.filtros{
+  position:fixed;
+  bottom:0;left:0;right:0;
+  background:white;
+  border-top:1px solid var(--gray-200);
+  padding:10px 16px;
+  padding-bottom:calc(10px + var(--safe-bottom));
+  display:flex;gap:8px;overflow-x:auto;
+  z-index:1000;scrollbar-width:none;
+}
+.filtros::-webkit-scrollbar{display:none;}
+.filtro-btn{
+  flex-shrink:0;
+  display:flex;align-items:center;gap:6px;
+  border:1.5px solid var(--gray-200);border-radius:20px;
+  padding:6px 12px;font-family:var(--font);
+  font-size:12px;font-weight:600;cursor:pointer;
+  background:white;transition:all 0.15s;white-space:nowrap;
+}
+.filtro-btn .dot{width:8px;height:8px;border-radius:50%;}
+.filtro-btn.active{background:var(--black);color:white;border-color:var(--black);}
+.filtro-btn.active .filtro-label{color:white;}
+.filtro-label{color:var(--gray-500);}
+
+/* POPUP LEAFLET PERSONALIZADO */
+.siie-popup .leaflet-popup-content-wrapper{
+  background:white;border-radius:10px;
+  border:1px solid var(--gray-200);
+  box-shadow:0 4px 20px rgba(0,0,0,0.15);
+  padding:0;overflow:hidden;
+}
+.siie-popup .leaflet-popup-content{margin:0;width:240px !important;}
+.siie-popup .leaflet-popup-tip{background:white;}
+.popup-foto{width:100%;height:100px;object-fit:cover;background:var(--gray-100);display:flex;align-items:center;justify-content:center;}
+.popup-foto img{width:100%;height:100%;object-fit:cover;}
+.popup-foto svg{width:32px;height:32px;stroke:#ccc;fill:none;}
+.popup-body{padding:10px 12px;}
+.popup-nombre{font-size:13px;font-weight:600;margin-bottom:3px;line-height:1.3;}
+.popup-meta{font-size:11px;color:var(--gray-400);margin-bottom:8px;}
+.popup-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.popup-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;}
+.popup-btn{
+  display:block;width:100%;background:var(--black);
+  color:white;border:none;border-radius:6px;
+  padding:8px;font-family:var(--font);font-size:12px;
+  font-weight:600;cursor:pointer;text-align:center;
+  text-decoration:none;
+}
+
+/* LEYENDA */
+.leyenda{
+  position:absolute;top:calc(var(--bar-h) + 12px);right:12px;
+  background:white;border:1px solid var(--gray-200);
+  border-radius:8px;padding:8px 10px;z-index:500;
+  font-size:11px;
+}
+.ley-item{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ley-item:last-child{margin-bottom:0;}
+.ley-dot{width:10px;height:10px;border-radius:50%;}
+.ley-label{color:var(--gray-500);}
+
+/* SPINNER */
+.map-loading{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  z-index:600;background:white;
+  border-radius:8px;padding:12px 16px;
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--gray-500);
+  box-shadow:0 2px 12px rgba(0,0,0,0.1);
+}
+.map-loading svg{width:20px;height:20px;stroke:var(--gray-300);fill:none;stroke-width:2;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="btn-back" onclick="history.back()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Volver
+  </button>
+  <span class="topbar-title">Mapa de establecimientos</span>
+  <span class="topbar-count" id="map-count">0 edificios</span>
+</div>
+
+<div id="map"></div>
+
+<!-- LEYENDA -->
+<div class="leyenda">
+  <div class="ley-item"><div class="ley-dot" style="background:#c0392b"></div><span class="ley-label">Impide pedagógico</span></div>
+  <div class="ley-item"><div class="ley-dot" style="background:#BA7517"></div><span class="ley-label">Problemas menores</span></div>
+  <div class="ley-item"><div class="ley-dot" style="background:#1D9E75"></div><span class="ley-label">Sin problemas</span></div>
+  <div class="ley-item"><div class="ley-dot" style="background:#888"></div><span class="ley-label">Sin relevamiento</span></div>
+</div>
+
+<!-- LOADING -->
+<div class="map-loading" id="map-loading">
+  <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+  Cargando establecimientos…
+</div>
+
+<!-- FILTROS -->
+<div class="filtros">
+  <button class="filtro-btn active" id="f-todos" onclick="filtrar('todos',this)">
+    <span class="filtro-label">Todos</span>
+  </button>
+  <button class="filtro-btn" id="f-imp" onclick="filtrar('imp',this)">
+    <div class="dot" style="background:#c0392b"></div>
+    <span class="filtro-label">Impiden pedagógico</span>
+  </button>
+  <button class="filtro-btn" id="f-problemas" onclick="filtrar('problemas',this)">
+    <div class="dot" style="background:#BA7517"></div>
+    <span class="filtro-label">Con problemas</span>
+  </button>
+  <button class="filtro-btn" id="f-ok" onclick="filtrar('ok',this)">
+    <div class="dot" style="background:#1D9E75"></div>
+    <span class="filtro-label">Sin problemas</span>
+  </button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+'use strict';
+
+const APPS_SCRIPT_URL_MAPA = (() => {
+  try { if (typeof CONFIG !== 'undefined') return CONFIG.APPS_SCRIPT_URL; } catch {}
+  return localStorage.getItem('siie_apps_script_url') || '';
+})();
+
+let map, markersLayer;
+let todosEdificios = [];
+let filtroActivo = 'todos';
+
+/* ── INIT MAPA ── */
+document.addEventListener('DOMContentLoaded', () => {
+  initMapa();
+  cargarEdificios();
+});
+
+function initMapa() {
+  // Centro en La Plata por defecto — se ajusta al cargar los datos
+  map = L.map('map', { zoomControl: true, attributionControl: false }).setView([-34.9205, -57.9536], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap',
+  }).addTo(map);
+
+  markersLayer = L.layerGroup().addTo(map);
+
+  // Atribución discreta
+  L.control.attribution({ position: 'bottomleft', prefix: '' }).addTo(map);
+}
+
+/* ── CARGAR EDIFICIOS ── */
+async function cargarEdificios() {
+  const user = JSON.parse(localStorage.getItem('siie_user') || '{}');
+
+  // Caché
+  const cached = getCached('siie_edificios_mapa');
+  if (cached && cached.length) {
+    todosEdificios = cached;
+    renderMarcadores(cached);
+  }
+
+  try {
+    const url = new URL(APPS_SCRIPT_URL_MAPA);
+    url.searchParams.set('action', 'edificios');
+    url.searchParams.set('email', user.email || '');
+
+    const res = await fetch(url.toString());
+    const result = await res.json();
+
+    if (result.ok && result.data.length) {
+      todosEdificios = result.data;
+      setCache('siie_edificios_mapa', result.data);
+      renderMarcadores(result.data);
+    }
+  } catch (e) {
+    if (!cached || !cached.length) usarDemoData();
+  } finally {
+    document.getElementById('map-loading').style.display = 'none';
+  }
+}
+
+/* ── RENDER MARCADORES ── */
+function renderMarcadores(edificios) {
+  markersLayer.clearLayers();
+
+  const visible = edificios.filter(e => aplicarFiltro(e));
+  document.getElementById('map-count').textContent = visible.length + ' edificios';
+
+  if (!visible.length) return;
+
+  const bounds = [];
+
+  visible.forEach(e => {
+    const lat = parseFloat(e.latitud);
+    const lng = parseFloat(e.longitud);
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+
+    bounds.push([lat, lng]);
+
+    const color = getColor(e);
+    const marker = L.circleMarker([lat, lng], {
+      radius: 10,
+      fillColor: color,
+      color: 'white',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.9,
+    });
+
+    marker.bindPopup(crearPopup(e), {
+      className: 'siie-popup',
+      maxWidth: 260,
+    });
+
+    markersLayer.addLayer(marker);
+  });
+
+  // Ajustar vista
+  if (bounds.length) {
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+  }
+}
+
+/* ── COLOR POR ESTADO ── */
+function getColor(e) {
+  if (e.impide_desarrollo_pedagogico === true ||
+      e.impide_desarrollo_pedagogico === 'true' ||
+      e.impide_desarrollo_pedagogico === 'S') return '#c0392b';
+  if (e.estado === 'critico' || e.estado === 'malo') return '#BA7517';
+  if (e.estado === 'bueno' || e.estado === 'optimo' || e.estado === 'regular') return '#1D9E75';
+  return '#888';
+}
+
+/* ── POPUP ── */
+function crearPopup(e) {
+  const fotoHtml = e.foto_fachada
+    ? `<div class="popup-foto"><img src="${e.foto_fachada}" alt="Fachada"></div>`
+    : `<div class="popup-foto" style="height:60px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+
+  const impBadge = (e.impide_desarrollo_pedagogico === true || e.impide_desarrollo_pedagogico === 'S')
+    ? '<span class="popup-badge" style="background:#fef2f2;color:#8b1a1a;">Impide pedagógico</span>'
+    : '';
+
+  const etapaBadge = e.etapa_id
+    ? `<span class="popup-badge" style="background:#e6eff8;color:#0f4c81;">${e.etapa_id}</span>`
+    : '';
+
+  return `
+    ${fotoHtml}
+    <div class="popup-body">
+      <div class="popup-nombre">${e.nombre || '—'}</div>
+      <div class="popup-meta">${[e.delegacion, e.localidad].filter(Boolean).join(' · ')}</div>
+      <div class="popup-badges">${impBadge}${etapaBadge}</div>
+      <a class="popup-btn" href="ficha.html?id=${e.id_edificio}" onclick="this.blur()">Ver ficha completa →</a>
+    </div>`;
+}
+
+/* ── FILTROS ── */
+function filtrar(tipo, btn) {
+  filtroActivo = tipo;
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMarcadores(todosEdificios);
+}
+
+function aplicarFiltro(e) {
+  if (filtroActivo === 'todos') return true;
+  if (filtroActivo === 'imp') return e.impide_desarrollo_pedagogico === true || e.impide_desarrollo_pedagogico === 'S';
+  if (filtroActivo === 'problemas') return ['critico','malo','regular'].includes(e.estado);
+  if (filtroActivo === 'ok') return ['bueno','optimo'].includes(e.estado);
+  return true;
+}
+
+/* ── DEMO DATA ── */
+function usarDemoData() {
+  const demo = [
+    { id_edificio:'ED-001', nombre:'Escuela Primaria N° 12', delegacion:'Norte', localidad:'La Plata', latitud:-34.9105, longitud:-57.9636, estado:'critico', impide_desarrollo_pedagogico:true, etapa_id:'Etapa 1', foto_fachada:null },
+    { id_edificio:'ED-002', nombre:'Escuela Primaria N° 47', delegacion:'Sur',   localidad:'La Plata', latitud:-34.9305, longitud:-57.9436, estado:'regular', impide_desarrollo_pedagogico:false, etapa_id:'Etapa 1', foto_fachada:null },
+    { id_edificio:'ED-003', nombre:'Escuela Secundaria N° 8', delegacion:'Centro', localidad:'La Plata', latitud:-34.9205, longitud:-57.9536, estado:'bueno', impide_desarrollo_pedagogico:false, etapa_id:'Etapa 2', foto_fachada:null },
+    { id_edificio:'ED-004', nombre:'Jardín N° 3', delegacion:'Norte', localidad:'La Plata', latitud:-34.9155, longitud:-57.9686, estado:'malo', impide_desarrollo_pedagogico:false, etapa_id:'Etapa 1', foto_fachada:null },
+    { id_edificio:'ED-005', nombre:'Escuela Técnica N° 2', delegacion:'Este', localidad:'La Plata', latitud:-34.9250, longitud:-57.9380, estado:'optimo', impide_desarrollo_pedagogico:false, etapa_id:'Etapa 2', foto_fachada:null },
+  ];
+  todosEdificios = demo;
+  renderMarcadores(demo);
+  document.getElementById('map-loading').style.display = 'none';
+}
+
+/* ── CACHÉ ── */
+function setCache(key, data) { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); }
+function getCached(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > 5 * 60 * 1000) return null;
+    return data;
+  } catch { return null; }
+}
+</script>
+</body>
+</html>

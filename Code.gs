@@ -56,6 +56,9 @@ function doGet(e) {
       case 'edificio':  result = getEdificio(e.parameter.id, email); break;
       case 'etapas':    result = getEtapas(email); break;
       case 'ping':      result = { ok: true, ts: new Date().toISOString() }; break;
+      case 'dashboard': result = getDashboard(email); break;
+      case 'relevamientos_edificio': result = getRelevamientosEdificio(e.parameter.id, email); break;
+      case 'historial_edificio': result = getHistorialEdificio(e.parameter.id, email); break;
       default:          result = { ok: false, error: 'Acción no reconocida: ' + action };
     }
   } catch (err) {
@@ -552,4 +555,145 @@ function getHistorialEdificio(id, email) {
   var rows = getRelatedRows(HOJAS.HISTORIAL, 'edificio_id', id);
   rows.sort(function(a,b){ return new Date(b.fecha) - new Date(a.fecha); });
   return { ok: true, data: rows };
+}
+
+/* ── DASHBOARD ── */
+function getDashboard(email) {
+  requireRole(email, ['admin','inspector','viewer']);
+
+  var edificiosSheet = SS.getSheetByName(HOJAS.EDIFICIOS);
+  var intSheet = SS.getSheetByName(HOJAS.INTERVENCIONES);
+  var relSheet = SS.getSheetByName(HOJAS.RELEVAMIENTOS);
+  var datosSheet = SS.getSheetByName(HOJAS.DATOS_INST);
+
+  var edificios = edificiosSheet ? Math.max(0, edificiosSheet.getLastRow() - 1) : 0;
+
+  // Matrícula total
+  var alumnos = 0;
+  if (datosSheet && datosSheet.getLastRow() > 1) {
+    var datosData = datosSheet.getDataRange().getValues();
+    var idxMat = datosData[0].indexOf('matricula');
+    for (var i = 1; i < datosData.length; i++) {
+      var m = parseInt(datosData[i][idxMat]);
+      if (!isNaN(m)) alumnos += m;
+    }
+  }
+
+  // Intervenciones
+  var imp = 0, intAbiertas = 0, ok = 0;
+  var estadosCounts = {};
+  var patronesCounts = {};
+  var evolucionMeses = {};
+  var now = new Date();
+
+  if (intSheet && intSheet.getLastRow() > 1) {
+    var intData = intSheet.getDataRange().getValues();
+    var hInt = intData[0];
+    var iEstado = hInt.indexOf('estado');
+    var iImp    = hInt.indexOf('impide_desarrollo_pedagogico');
+    var iFin    = hInt.indexOf('fecha_fin');
+    var iCreac  = hInt.indexOf('fecha_creacion');
+    var iComp   = hInt.indexOf('componente');
+
+    for (var r = 1; r < intData.length; r++) {
+      var estado = intData[r][iEstado];
+      var impide = intData[r][iImp];
+      var fechaFin = intData[r][iFin];
+      var fechaCreac = intData[r][iCreac];
+      var comp = intData[r][iComp] || 'Sin especificar';
+
+      if (impide === true || impide === 'true' || impide === 'S') imp++;
+      estadosCounts[estado] = (estadosCounts[estado] || 0) + 1;
+      if (['pendiente','en_analisis','aprobada','en_ejecucion'].includes(estado)) intAbiertas++;
+
+      patronesCounts[comp] = (patronesCounts[comp] || 0) + 1;
+
+      // Evolución mensual (últimos 6 meses)
+      var fCreac = fechaCreac ? new Date(fechaCreac) : null;
+      if (fCreac) {
+        var mesKey = (fCreac.getMonth() + 1) + '/' + fCreac.getFullYear();
+        if (!evolucionMeses[mesKey]) evolucionMeses[mesKey] = { abiertas: 0, resueltas: 0 };
+        evolucionMeses[mesKey].abiertas++;
+      }
+      if (estado === 'finalizada' && fechaFin) {
+        var fFin = new Date(fechaFin);
+        if (fFin.getMonth() === now.getMonth() && fFin.getFullYear() === now.getFullYear()) ok++;
+        var mesKeyFin = (fFin.getMonth() + 1) + '/' + fFin.getFullYear();
+        if (!evolucionMeses[mesKeyFin]) evolucionMeses[mesKeyFin] = { abiertas: 0, resueltas: 0 };
+        evolucionMeses[mesKeyFin].resueltas++;
+      }
+    }
+  }
+
+  // Inspecciones este mes
+  var inspMes = 0;
+  if (relSheet && relSheet.getLastRow() > 1) {
+    var relData = relSheet.getDataRange().getValues();
+    var hRel = relData[0];
+    var iFecha = hRel.indexOf('fecha');
+    var iTipo  = hRel.indexOf('tipo_relevamiento');
+    for (var rr = 1; rr < relData.length; rr++) {
+      if (relData[rr][iTipo] === 'inspeccion_semanal') {
+        var fRel = new Date(relData[rr][iFecha]);
+        if (fRel.getMonth() === now.getMonth() && fRel.getFullYear() === now.getFullYear()) inspMes++;
+      }
+    }
+  }
+
+  // Distribución territorial
+  var territorial = {};
+  var impTerritorial = {};
+  if (edificiosSheet && edificiosSheet.getLastRow() > 1) {
+    var edData = edificiosSheet.getDataRange().getValues();
+    var hEd = edData[0];
+    var iDel = hEd.indexOf('delegacion');
+    var iImpEd = hEd.indexOf('impide_desarrollo_pedagogico');
+    for (var ed = 1; ed < edData.length; ed++) {
+      var del = edData[ed][iDel] || 'Sin delegación';
+      territorial[del] = (territorial[del] || 0) + 1;
+      if (edData[ed][iImpEd] === true || edData[ed][iImpEd] === 'S') {
+        impTerritorial[del] = (impTerritorial[del] || 0) + 1;
+      }
+    }
+  }
+
+  // Formatear evolución
+  var evolucionArr = Object.keys(evolucionMeses).slice(-6).map(function(k) {
+    return { mes: k, abiertas: evolucionMeses[k].abiertas, resueltas: evolucionMeses[k].resueltas };
+  });
+
+  // Top 8 patrones
+  var patronesArr = Object.keys(patronesCounts)
+    .map(function(k) {
+      var alerta = patronesCounts[k] >= 3 ? 'Recurrente · revisar mantenimiento preventivo' : null;
+      return { componente: k, count: patronesCounts[k], alerta: alerta };
+    })
+    .sort(function(a,b){ return b.count - a.count; })
+    .slice(0, 8);
+
+  // Estados
+  var estadosArr = Object.keys(estadosCounts).map(function(k) {
+    return { estado: k, count: estadosCounts[k] };
+  });
+
+  // Territorial
+  var territorialArr = Object.keys(territorial).map(function(k) {
+    return { delegacion: k, count: territorial[k], imp: impTerritorial[k] || 0 };
+  }).sort(function(a,b){ return b.count - a.count; });
+
+  return {
+    ok: true,
+    data: {
+      edificios: edificios,
+      alumnos: alumnos,
+      imp: imp,
+      int: intAbiertas,
+      ok: ok,
+      inspecciones: inspMes,
+      evolucion: evolucionArr,
+      estados: estadosArr,
+      patrones: patronesArr,
+      territorial: territorialArr,
+    }
+  };
 }
