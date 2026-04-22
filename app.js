@@ -41,10 +41,17 @@ let state = {
    INIT
 ══════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
+  // Timeout de seguridad: si algo falla, mostrar el login igual
+  const safetyTimer = setTimeout(() => {
+    hideLoading();
+    showLogin();
+  }, 3000);
+
   registerSW();
   setupOfflineDetection();
   setupInstallPrompt();
   await initAuth();
+  clearTimeout(safetyTimer);
 });
 
 /* ── SERVICE WORKER ─────────────────────────────────── */
@@ -75,14 +82,15 @@ async function initAuth() {
 }
 
 function showLogin() {
-  document.getElementById('loading-screen').classList.add('hidden');
-  document.getElementById('login-screen').classList.remove('hidden');
+  const ls = document.getElementById('loading-screen');
+  const login = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'none';
+  if (login) login.classList.remove('hidden');
 }
 
 function hideLoading() {
   const ls = document.getElementById('loading-screen');
-  ls.classList.add('fade');
-  setTimeout(() => ls.classList.add('hidden'), 400);
+  if (ls) ls.style.display = 'none';
 }
 
 /* Login con email + contraseña verificado contra la hoja "roles" del Sheet */
