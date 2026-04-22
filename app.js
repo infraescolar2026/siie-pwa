@@ -428,7 +428,7 @@ function abrirFiltros() {
   alert('Panel de filtros · próximamente\n\nFiltros: etapa · inspector · estado · impacto pedagógico');
 }
 
-function verEdificio(id) {
+function window.location.href='ficha.html?id='+id {
   alert(`Ficha del edificio ID: ${id}\n\nMódulo en desarrollo · Fase 3`);
 }
 

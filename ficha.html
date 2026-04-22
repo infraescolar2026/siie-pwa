@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0e">
+<title>SIIE · Ficha del edificio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:#0f0f0e; --gray-700:#3a3a37; --gray-500:#6b6b66; --gray-400:#999993;
+  --gray-300:#c8c8c2; --gray-200:#e2e2dc; --gray-100:#eeede8; --gray-50:#f7f6f2;
+  --accent:#0f4c81; --accent-l:#e6eff8;
+  --ok:#1a5c3a; --ok-l:#e8f5ee; --ok-b:#1D9E75;
+  --warn:#7a4800; --warn-l:#fff3e0; --warn-b:#BA7517;
+  --danger:#8b1a1a; --danger-l:#fef2f2;
+  --font:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace; --r:10px;
+  --bar-h:48px; --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:var(--font);font-size:15px;color:var(--black);background:var(--gray-50);min-height:100vh;}
+
+/* ── TOP BAR ── */
+.topbar{
+  height:var(--bar-h);background:var(--black);
+  display:flex;align-items:center;padding:0 16px;gap:10px;
+  position:sticky;top:0;z-index:100;
+  padding-top:env(safe-area-inset-top,0px);
+}
+.btn-back{background:none;border:none;color:white;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);font-size:13px;padding:0;}
+.btn-back svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.topbar-title{font-size:13px;color:#aaa;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.btn-accion{background:var(--accent);border:none;border-radius:6px;color:white;font-family:var(--font);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;white-space:nowrap;}
+
+/* ── HEADER DEL EDIFICIO ── */
+.edificio-header{
+  background:var(--black);padding:16px;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.edificio-foto{
+  width:64px;height:64px;border-radius:8px;
+  background:var(--gray-700);flex-shrink:0;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.edificio-foto img{width:100%;height:100%;object-fit:cover;}
+.edificio-foto svg{width:28px;height:28px;stroke:#555;fill:none;stroke-width:1.5;}
+.edificio-info{flex:1;min-width:0;}
+.edificio-nombre{font-size:17px;font-weight:600;color:white;line-height:1.2;margin-bottom:4px;}
+.edificio-meta{font-size:12px;color:#888;margin-bottom:8px;}
+.edificio-badges{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ── SOLAPAS ── */
+.solapas-wrap{background:white;border-bottom:1px solid var(--gray-200);overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--bar-h);z-index:98;}
+.solapas-wrap::-webkit-scrollbar{display:none;}
+.solapas{display:flex;}
+.solapa{
+  flex-shrink:0;padding:10px 14px;
+  font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--gray-400);background:none;border:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;
+}
+.solapa.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── CONTENIDO ── */
+.content{padding:14px;max-width:680px;margin:0 auto;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ── CARDS ── */
+.card{background:white;border:1px solid var(--gray-200);border-radius:var(--r);margin-bottom:10px;overflow:hidden;}
+.card-head{padding:10px 14px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:12px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-500);}
+.card-body{padding:14px;}
+
+/* ── CAMPOS LECTURA ── */
+.field-grid{display:grid;gap:10px 16px;}
+.fg-2{grid-template-columns:1fr 1fr;}
+.fg-3{grid-template-columns:1fr 1fr 1fr;}
+.fg-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.field-ro{display:flex;flex-direction:column;gap:3px;}
+.field-lbl{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);}
+.field-val{font-size:14px;color:var(--black);line-height:1.4;}
+.field-val.mono{font-family:var(--mono);font-size:13px;}
+.field-val.empty{color:var(--gray-300);font-style:italic;font-size:13px;}
+
+/* ── BADGE ── */
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;letter-spacing:0.04em;}
+.b-ok{background:var(--ok-l);color:var(--ok);}
+.b-warn{background:var(--warn-l);color:var(--warn);}
+.b-danger{background:var(--danger-l);color:var(--danger);}
+.b-info{background:var(--accent-l);color:var(--accent);}
+.b-neutral{background:var(--gray-100);color:var(--gray-500);}
+
+/* ── ESTADO BAR ── */
+.estado-bar{
+  display:flex;align-items:center;gap:10px;
+  background:var(--gray-50);border-radius:8px;padding:10px 12px;
+  margin-bottom:10px;
+}
+.estado-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.estado-critico{background:#c0392b;}
+.estado-malo{background:#d35400;}
+.estado-regular{background:#b7950b;}
+.estado-bueno{background:var(--ok-b);}
+.estado-optimo{background:#148f77;}
+.estado-texto{font-size:14px;font-weight:500;}
+.estado-pct{font-family:var(--mono);font-size:13px;color:var(--gray-400);margin-left:auto;}
+
+/* ── SECTORES ── */
+.sector-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 0;border-bottom:0.5px solid var(--gray-100);
+}
+.sector-item:last-child{border-bottom:none;}
+.sector-icon{
+  width:36px;height:36px;border-radius:6px;
+  background:var(--gray-100);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.sector-icon svg{width:18px;height:18px;stroke:var(--gray-400);fill:none;stroke-width:1.8;}
+.sector-info{flex:1;}
+.sector-nombre{font-size:13px;font-weight:500;}
+.sector-meta{font-size:12px;color:var(--gray-400);}
+
+/* ── INTERVENCIONES ── */
+.int-item{
+  padding:12px 14px;border-bottom:0.5px solid var(--gray-100);
+  cursor:pointer;transition:background 0.15s;
+}
+.int-item:last-child{border-bottom:none;}
+.int-item:active{background:var(--gray-50);}
+.int-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.int-comp{font-size:13px;font-weight:500;flex:1;}
+.int-sector{font-size:12px;color:var(--gray-400);}
+.int-fecha{font-family:var(--mono);font-size:11px;color:var(--gray-300);}
+
+/* ── HISTORIAL ── */
+.hist-item{
+  display:flex;gap:12px;padding:10px 0;
+  border-bottom:0.5px solid var(--gray-100);
+}
+.hist-item:last-child{border-bottom:none;}
+.hist-line{display:flex;flex-direction:column;align-items:center;gap:0;}
+.hist-dot{width:10px;height:10px;border-radius:50%;background:var(--gray-300);flex-shrink:0;margin-top:4px;}
+.hist-dot.mejoro{background:var(--ok-b);}
+.hist-dot.empeoro{background:#c0392b;}
+.hist-connector{width:1px;flex:1;background:var(--gray-200);min-height:20px;}
+.hist-body{flex:1;}
+.hist-titulo{font-size:13px;font-weight:500;margin-bottom:2px;}
+.hist-meta{font-size:12px;color:var(--gray-400);}
+.hist-obs{font-size:12px;color:var(--gray-500);margin-top:4px;font-style:italic;}
+
+/* ── RELEVAMIENTOS ── */
+.rel-item{
+  padding:12px 14px;border-bottom:0.5px solid var(--gray-100);
+  cursor:pointer;transition:background 0.15s;
+}
+.rel-item:last-child{border-bottom:none;}
+.rel-item:active{background:var(--gray-50);}
+.rel-header{display:flex;align-items:center;gap:8px;}
+.rel-fecha{font-size:13px;font-weight:500;flex:1;}
+.rel-inspector{font-size:12px;color:var(--gray-400);}
+
+/* ── ACCIONES FLOTANTES ── */
+.fab-wrap{
+  position:fixed;bottom:calc(16px + var(--safe-bottom));right:16px;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-end;
+  z-index:90;
+}
+.fab{
+  display:flex;align-items:center;gap:8px;
+  background:var(--accent);color:white;border:none;border-radius:24px;
+  padding:12px 18px;font-family:var(--font);font-size:13px;font-weight:600;
+  cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);
+  transition:background 0.15s,transform 0.1s;
+}
+.fab:active{transform:scale(0.97);}
+.fab svg{width:18px;height:18px;stroke:white;fill:none;stroke-width:2;}
+.fab-sm{background:var(--gray-700);padding:10px 14px;font-size:12px;}
+
+/* ── SPINNER ── */
+.spinner-wrap{padding:32px;display:flex;align-items:center;justify-content:center;}
+.spinner svg{width:28px;height:28px;stroke:var(--gray-300);fill:none;stroke-width:2;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── EMPTY STATE ── */
+.empty{padding:32px 16px;text-align:center;color:var(--gray-300);}
+.empty svg{width:40px;height:40px;stroke:var(--gray-200);fill:none;stroke-width:1.5;margin-bottom:8px;}
+.empty p{font-size:13px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(80px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--gray-900);color:white;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:500;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;}
+
+@media(max-width:480px){
+  .fg-4{grid-template-columns:1fr 1fr;}
+  .fg-3{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <button class="btn-back" onclick="history.back()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Volver
+  </button>
+  <span class="topbar-title" id="topbar-nombre">Cargando…</span>
+  <button class="btn-accion" onclick="nuevaInspeccion()">+ Inspección</button>
+</div>
+
+<!-- HEADER EDIFICIO -->
+<div class="edificio-header" id="edificio-header">
+  <div class="edificio-foto" id="edificio-foto">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+  </div>
+  <div class="edificio-info">
+    <div class="edificio-nombre" id="hdr-nombre">Cargando…</div>
+    <div class="edificio-meta" id="hdr-meta"></div>
+    <div class="edificio-badges" id="hdr-badges"></div>
+  </div>
+</div>
+
+<!-- SOLAPAS -->
+<div class="solapas-wrap">
+  <div class="solapas">
+    <button class="solapa active" id="sol-general"       onclick="irSolapa('general')">General</button>
+    <button class="solapa"        id="sol-contacto"      onclick="irSolapa('contacto')">Contacto</button>
+    <button class="solapa"        id="sol-sectores"      onclick="irSolapa('sectores')">Sectores</button>
+    <button class="solapa"        id="sol-relevamientos" onclick="irSolapa('relevamientos')">Relevamientos</button>
+    <button class="solapa"        id="sol-intervenciones"onclick="irSolapa('intervenciones')">Intervenciones</button>
+    <button class="solapa"        id="sol-historial"     onclick="irSolapa('historial')">Historial</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── GENERAL ── -->
+  <div class="tab-panel active" id="tab-general">
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Estado del edificio</span></div>
+      <div class="card-body">
+        <div class="estado-bar" id="estado-bar">
+          <div class="estado-dot" id="estado-dot"></div>
+          <span class="estado-texto" id="estado-texto">—</span>
+          <span class="estado-pct" id="estado-pct"></span>
+        </div>
+        <div class="field-grid fg-2">
+          <div class="field-ro">
+            <span class="field-lbl">Último relevamiento</span>
+            <span class="field-val" id="g-ultimo-rel">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Inspector</span>
+            <span class="field-val" id="g-inspector">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Identificación</span></div>
+      <div class="card-body">
+        <div class="field-grid fg-4">
+          <div class="field-ro">
+            <span class="field-lbl">N° establecimiento</span>
+            <span class="field-val mono" id="g-numero">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Tipo</span>
+            <span class="field-val" id="g-tipo">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Delegación</span>
+            <span class="field-val" id="g-delegacion">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Localidad</span>
+            <span class="field-val" id="g-localidad">—</span>
+          </div>
+          <div class="field-ro" style="grid-column:span 2">
+            <span class="field-lbl">Dirección</span>
+            <span class="field-val" id="g-direccion">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Etapa</span>
+            <span class="field-val" id="g-etapa">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Zona</span>
+            <span class="field-val" id="g-zona">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Datos institucionales</span></div>
+      <div class="card-body">
+        <div class="field-grid fg-4">
+          <div class="field-ro">
+            <span class="field-lbl">Matrícula</span>
+            <span class="field-val mono" id="g-matricula">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Secciones</span>
+            <span class="field-val mono" id="g-secciones">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Turnos</span>
+            <span class="field-val" id="g-turnos">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Docentes</span>
+            <span class="field-val mono" id="g-docentes">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── CONTACTO ── -->
+  <div class="tab-panel" id="tab-contacto">
+    <div class="card">
+      <div class="card-head"><span class="card-title">Referente institucional</span></div>
+      <div class="card-body" id="contacto-body">
+        <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Datos de contacto del edificio</span></div>
+      <div class="card-body">
+        <div class="field-grid fg-2">
+          <div class="field-ro">
+            <span class="field-lbl">Teléfono fijo</span>
+            <span class="field-val mono" id="c-tel">—</span>
+          </div>
+          <div class="field-ro">
+            <span class="field-lbl">Email institucional</span>
+            <span class="field-val" id="c-email">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTORES ── -->
+  <div class="tab-panel" id="tab-sectores">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Sectores del edificio</span>
+        <span class="badge b-neutral" id="sectores-count">0</span>
+      </div>
+      <div class="card-body" id="sectores-body">
+        <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RELEVAMIENTOS ── -->
+  <div class="tab-panel" id="tab-relevamientos">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Historial de relevamientos</span>
+        <span class="badge b-neutral" id="rel-count">0</span>
+      </div>
+      <div id="relevamientos-body">
+        <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INTERVENCIONES ── -->
+  <div class="tab-panel" id="tab-intervenciones">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Intervenciones</span>
+        <span class="badge b-neutral" id="int-count">0</span>
+      </div>
+      <div id="intervenciones-body">
+        <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HISTORIAL ── -->
+  <div class="tab-panel" id="tab-historial">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Historial de cambios</span>
+        <span class="badge b-neutral" id="hist-count">0</span>
+      </div>
+      <div class="card-body" id="historial-body">
+        <div class="spinner-wrap"><div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- FAB -->
+<div class="fab-wrap" id="fab-wrap">
+  <button class="fab" onclick="nuevaInspeccion()">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    Nueva inspección
+  </button>
+  <button class="fab fab-sm" onclick="nuevoRelevamiento()">
+    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    Relevamiento
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="ficha.js"></script>
+</body>
+</html>
