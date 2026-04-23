@@ -4,10 +4,7 @@
 
 'use strict';
 
-const APPS_SCRIPT_URL_DASH = (() => {
-  if (typeof CONFIG !== 'undefined') return CONFIG.APPS_SCRIPT_URL;
-  return localStorage.getItem('siie_apps_script_url') || '';
-})();
+const APPS_SCRIPT_URL_DASH = 'https://script.google.com/macros/s/AKfycbxDxiRPFcIgEOpkgGjE23IhDGOtwg_unDfAMPQRBpo0dglkXopT3q8ybb7sWJ6LRyiT4w/exec';
 
 const ESTADO_COLORS = {
   pendiente:             '#c8c8c2',
