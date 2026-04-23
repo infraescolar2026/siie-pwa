@@ -34,23 +34,29 @@ const HOJAS = {
   DATOS_INST:   'datos_institucionales',
 };
 
-/* ── CORS HEADERS ── */
-function setCORS(output) {
-  return output
-    .setHeader('Access-Control-Allow-Origin', '*')
-    .setHeader('Access-Control-Allow-Methods', 'GET, POST')
-    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+/* ── RESPUESTA JSON o JSONP ── */
+function jsonResponse(data, callback) {
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(data) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /* ── ENTRY POINTS ── */
 function doGet(e) {
-  const action = e.parameter.action;
-  const email  = e.parameter.email || '';
-  let result;
+  var action   = e.parameter.action;
+  var email    = e.parameter.email || '';
+  var callback = e.parameter.callback || '';
+  var result;
 
   try {
     switch (action) {
-      case 'auth':      result = { ok: false, error: 'Auth requiere POST' }; break;
+      case 'auth':     result = authUser(e.parameter.password ? decodeURIComponent(e.parameter.password) : '', email); break;
+      case 'sync_relevamiento': result = saveRelevamientoGET(e.parameter, email); break;
       case 'stats':     result = getStats(email); break;
       case 'edificios': result = getEdificios(email); break;
       case 'edificio':  result = getEdificio(e.parameter.id, email); break;
@@ -65,10 +71,7 @@ function doGet(e) {
     result = { ok: false, error: err.message };
   }
 
-  return setCORS(
-    ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON)
-  );
+  return jsonResponse(result, callback);
 }
 
 function doPost(e) {
@@ -92,10 +95,7 @@ function doPost(e) {
     result = { ok: false, error: err.message };
   }
 
-  return setCORS(
-    ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON)
-  );
+  return jsonResponse(result);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -723,4 +723,24 @@ function getDashboard(email) {
       territorial: territorialArr,
     }
   };
+}
+
+/* ── CORS: responder a solicitudes OPTIONS del navegador ── */
+function doOptions(e) {
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/* ── GUARDAR RELEVAMIENTO VIA GET (JSONP) ── */
+function saveRelevamientoGET(params, email) {
+  try {
+    var rawData = params.data ? decodeURIComponent(params.data) : null;
+    if (!rawData) return { ok: false, error: 'Sin datos' };
+    var data = JSON.parse(rawData);
+    data.email = email;
+    return saveRelevamiento(data, email);
+  } catch(e) {
+    return { ok: false, error: 'Error al parsear datos: ' + e.message };
+  }
 }
