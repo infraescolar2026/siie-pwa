@@ -494,15 +494,46 @@ async function apiCall(endpoint, body = null, method = null) {
   return res.json();
 }
 
-/* Auth via GET para evitar CORS en preflight */
+/* Auth via GET usando no-cors + iframe trick para evitar CORS con cuentas Gmail */
 async function apiCallAuth(email, password) {
   const url = new URL(CONFIG.APPS_SCRIPT_URL);
   url.searchParams.set('action', 'auth');
   url.searchParams.set('email', email);
   url.searchParams.set('password', encodeURIComponent(password));
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  url.searchParams.set('callback', 'siieCallback');
+
+  return new Promise((resolve, reject) => {
+    // Limpiar callback anterior
+    if (window.siieCallback) delete window.siieCallback;
+
+    // Timeout de 10 segundos
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Tiempo de espera agotado'));
+    }, 10000);
+
+    // Script JSONP
+    const script = document.createElement('script');
+    script.src = url.toString();
+
+    window.siieCallback = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window.siieCallback;
+    }
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Error de conexión'));
+    };
+
+    document.head.appendChild(script);
+  });
 }
 
 /* ══════════════════════════════════════════════════════
