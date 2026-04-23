@@ -112,7 +112,7 @@ async function signIn() {
   if (err) err.style.display = 'none';
 
   try {
-    const res = await apiCall('auth', { email, password: pass });
+    const res = await apiCallAuth(email, pass);
 
     if (res.ok) {
       state.user = res.user;
@@ -491,6 +491,17 @@ async function apiCall(endpoint, body = null, method = null) {
 
   const res = await fetch(url.toString(), options);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/* Auth via GET para evitar CORS en preflight */
+async function apiCallAuth(email, password) {
+  const url = new URL(CONFIG.APPS_SCRIPT_URL);
+  url.searchParams.set('action', 'auth');
+  url.searchParams.set('email', email);
+  url.searchParams.set('password', encodeURIComponent(password));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
