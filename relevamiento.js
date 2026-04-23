@@ -466,24 +466,17 @@ async function enviarRelevamiento() {
     return;
   }
 
-  // Con conexión → enviar
+  // Con conexión → enviar via JSONP (evita CORS)
   showOverlay('Enviando relevamiento…');
 
+  // Guardar en localStorage primero como respaldo
+  const borradorKey = 'siie_borrador_enviando_' + Date.now();
+  localStorage.setItem(borradorKey, JSON.stringify(data));
+
   try {
-    const url = new URL(APPS_SCRIPT_URL_REL);
-    url.searchParams.set('action', 'sync_relevamiento');
-    url.searchParams.set('email', data.email);
-
-    const res = await fetch(url.toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-
-    const result = await res.json();
-
+    const result = await enviarViaJSONP(data);
     if (result.ok) {
-      // Limpiar borrador
+      localStorage.removeItem(borradorKey);
       localStorage.removeItem('siie_borrador_ultimo');
       hideOverlay();
       showToast('Relevamiento enviado correctamente');
@@ -493,9 +486,6 @@ async function enviarRelevamiento() {
     }
   } catch (err) {
     hideOverlay();
-    // Guardar localmente como fallback
-    const key = 'siie_borrador_fallback_' + Date.now();
-    localStorage.setItem(key, JSON.stringify(data));
     showToast('Error al enviar · guardado localmente para reintentar', 4000);
     console.error('Error envío:', err);
   }
@@ -525,3 +515,37 @@ setInterval(() => {
   const nombre = document.getElementById('f-nombre')?.value;
   if (nombre) guardarBorrador();
 }, 60000);
+
+/* Envío via JSONP para evitar CORS */
+async function enviarViaJSONP(data) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'siieRelCb_' + Date.now();
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 15000);
+
+    const url = new URL(APPS_SCRIPT_URL_REL);
+    url.searchParams.set('action', 'sync_relevamiento');
+    url.searchParams.set('email', data.email || '');
+    url.searchParams.set('callback', cbName);
+    // Comprimir datos quitando fotos grandes para la URL
+    const dataMin = {...data, fachada: {...(data.fachada||{}), foto_base64: null}, fotos_problemas: []};
+    url.searchParams.set('data', encodeURIComponent(JSON.stringify(dataMin)));
+
+    window[cbName] = (result) => { cleanup(); resolve(result); };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
+    }
+
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.src = url.toString();
+    script.onerror = () => { cleanup(); reject(new Error('Error de red')); };
+    document.head.appendChild(script);
+  });
+}
