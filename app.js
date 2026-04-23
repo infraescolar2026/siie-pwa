@@ -248,8 +248,18 @@ const ICONS = {
 };
 
 function renderActionItem(a) {
+  const hrefs = {
+    relevamiento: 'relevamiento.html',
+    inspeccion: 'inspeccion.html',
+    intervencion: 'relevamiento.html',
+    mapa: 'mapa.html',
+    tabla: null,
+    dashboard: 'dashboard.html',
+  };
+  const href = hrefs[a.id];
+  const onclick = href ? `location.href='${href}'` : `navigate('${a.id}')`;
   return `
-    <div class="action-item" onclick="navigate('${a.id}')">
+    <div class="action-item" onclick="${onclick}">
       <div class="action-icon ai-${a.color}">${ICONS[a.icon]}</div>
       <div class="action-text">
         <div class="action-name">${a.name}</div>
