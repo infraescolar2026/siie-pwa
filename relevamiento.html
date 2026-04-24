@@ -260,6 +260,16 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 .spinner svg{width:40px;height:40px;stroke:white;fill:none;stroke-width:2;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+
+.f5{grid-template-columns:1fr 1fr 1fr 1fr 1fr;}
+.col-un{width:52px;}
+.col-afect{width:60px;}
+.col-fotos{width:80px;text-align:center;}
+.instruccion{background:var(--accent-l);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px;color:var(--accent);margin-bottom:12px;line-height:1.5;}
+.foto-slot.obligatoria{border-color:var(--warn-b);}
+.btn-enviar-final{width:100%;margin-top:20px;background:var(--accent);border:none;border-radius:8px;padding:14px;font-family:var(--font);font-size:15px;font-weight:600;color:white;cursor:pointer;}
+.btn-pdf-wrap{display:flex;gap:10px;margin-top:20px;}
+.btn-pdf{flex:none;background:var(--gray-700);border:none;border-radius:8px;padding:14px 20px;font-family:var(--font);font-size:14px;font-weight:600;color:white;cursor:pointer;}
 @media(max-width:480px){
   .f4{grid-template-columns:1fr 1fr;}
   .f3{grid-template-columns:1fr 1fr;}
@@ -309,22 +319,10 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
       <span class="section-q">¿Qué edificio es?</span>
     </div>
     <div class="section-body">
-      <div class="fields f1" style="margin-bottom:12px;">
-        <div class="field">
-          <label class="field-label">Nombre del establecimiento <span class="req">*</span></label>
-          <input type="text" id="f-nombre" placeholder="ej: Escuela Primaria N° 12" oninput="updateProgress()">
-          <span class="field-error" id="e-nombre">Campo obligatorio</span>
-        </div>
-      </div>
-      <div class="fields f4">
-        <div class="field">
-          <label class="field-label">N° establecimiento <span class="req">*</span></label>
-          <input type="text" id="f-numero" oninput="updateProgress()">
-          <span class="field-error" id="e-numero">Obligatorio</span>
-        </div>
+      <div class="fields f3" style="margin-bottom:12px;">
         <div class="field">
           <label class="field-label">Tipo / nivel <span class="req">*</span></label>
-          <select id="f-tipo" onchange="updateProgress()">
+          <select id="f-tipo" onchange="updateProgress(); generarNombre()">
             <option value="">Seleccionar…</option>
             <option>Jardín de infantes</option>
             <option>Primaria</option>
@@ -336,8 +334,45 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
           <span class="field-error" id="e-tipo">Obligatorio</span>
         </div>
         <div class="field">
+          <label class="field-label">N° establecimiento <span class="req">*</span></label>
+          <input type="text" id="f-numero" oninput="updateProgress(); generarNombre()">
+          <span class="field-error" id="e-numero">Obligatorio</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Nombre del establecimiento</label>
+          <input type="text" id="f-nombre" placeholder="Se completa automáticamente">
+        </div>
+      </div>
+      <div class="fields f4">
+        <div class="field">
           <label class="field-label">Delegación <span class="req">*</span></label>
-          <input type="text" id="f-delegacion" oninput="updateProgress()">
+          <select id="f-delegacion" onchange="updateProgress()">
+            <option value="">Seleccionar…</option>
+            <option>ABASTO</option>
+            <option>ALTOS DE SAN LORENZO</option>
+            <option>ÁNGEL ETCHEVERRY</option>
+            <option>ARANA</option>
+            <option>ARTURO SEGUÍ</option>
+            <option>CITY BELL</option>
+            <option>COLONIA URQUIZA</option>
+            <option>EL PELIGRO</option>
+            <option>EL RINCÓN</option>
+            <option>JOAQUÍN GORINA</option>
+            <option>JOSÉ HERNÁNDEZ</option>
+            <option>LISANDRO OLMOS</option>
+            <option>LOS HORNOS</option>
+            <option>LOS PORTEÑOS / LAS BANDERITAS</option>
+            <option>MALVINAS</option>
+            <option>MANUEL B. GONNET</option>
+            <option>RINGUELET</option>
+            <option>SAN CARLOS</option>
+            <option>SAVOIA</option>
+            <option>SICARDI</option>
+            <option>TOLOSA</option>
+            <option>VILLA CASTELLS</option>
+            <option>VILLA ELISA</option>
+            <option>VILLA ELVIRA</option>
+          </select>
           <span class="field-error" id="e-delegacion">Obligatorio</span>
         </div>
         <div class="field">
@@ -359,6 +394,28 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
           <input type="email" id="f-email">
         </div>
       </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--gray-100);">
+        <div class="instruccion">📍 Pegá el link de Google Maps. El sistema extrae las coordenadas automáticamente para el mapa.</div>
+        <div class="fields f1">
+          <div class="field">
+            <label class="field-label">Link de Google Maps</label>
+            <input type="text" id="f-gmaps" placeholder="ej: https://maps.app.goo.gl/..." oninput="extraerCoordenadas(this.value)">
+            <span style="font-size:11px;color:var(--gray-400);font-style:italic;">Abrí Google Maps → Compartir ubicación → Copiar link → Pegá acá</span>
+          </div>
+        </div>
+        <div class="fields f2" style="margin-top:8px;">
+          <div class="field">
+            <label class="field-label">Latitud</label>
+            <input type="text" id="f-latitud" placeholder="Se extrae del link" readonly style="background:var(--gray-100);">
+          </div>
+          <div class="field">
+            <label class="field-label">Longitud</label>
+            <input type="text" id="f-longitud" placeholder="Se extrae del link" readonly style="background:var(--gray-100);">
+          </div>
+        </div>
+      </div>
+      <div style="display:none">
+      </div>
     </div>
   </div>
 </div>
@@ -374,8 +431,19 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
       <div class="fields f4">
         <div class="field span2">
           <label class="field-label">Inspector responsable <span class="req">*</span></label>
-          <input type="text" id="f-inspector" oninput="updateProgress()">
+          <select id="f-inspector" onchange="updateProgress(); sincronizarInspector()">
+            <option value="">Seleccionar…</option>
+            <option>ROMANO ROCIO E.</option>
+            <option>LLERAL JULIANA</option>
+            <option>ETCHEGOYEN FERMIN</option>
+            <option>PANETTA JOSÉ LUIS</option>
+            <option>MARTINEZ ROBERTO G.</option>
+            <option>MARGARITINI MARIANO</option>
+            <option>GARRITANO CARLA G.</option>
+            <option>UCHA RAFAEL</option>
+          </select>
           <span class="field-error" id="e-inspector">Obligatorio</span>
+          <span style="font-size:11px;color:var(--gray-400);font-style:italic;">Para agregar inspectores: editá la hoja "inspectores" del Sheet</span>
         </div>
         <div class="field">
           <label class="field-label">Etapa</label>
@@ -411,11 +479,31 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
       <span class="section-title">Datos institucionales</span>
     </div>
     <div class="section-body">
-      <div class="fields f4" style="margin-bottom:14px;">
+      <div class="field-label" style="margin-bottom:8px;">Matrícula</div>
+      <div class="fields f5" style="margin-bottom:14px;">
         <div class="field">
-          <label class="field-label">Matrícula total</label>
-          <input type="number" id="f-matricula" min="0" placeholder="ej: 312">
+          <label class="field-label">Varones</label>
+          <input type="number" id="f-varones" min="0" oninput="calcularMatricula()">
         </div>
+        <div class="field">
+          <label class="field-label">Mujeres</label>
+          <input type="number" id="f-mujeres" min="0" oninput="calcularMatricula()">
+        </div>
+        <div class="field">
+          <label class="field-label">Otros</label>
+          <input type="number" id="f-otros" min="0" oninput="calcularMatricula()">
+        </div>
+        <div class="field">
+          <label class="field-label">Con discapacidad</label>
+          <input type="number" id="f-discapacidad" min="0" oninput="calcularMatricula()">
+        </div>
+        <div class="field">
+          <label class="field-label">Total</label>
+          <div style="background:var(--accent-l);border-radius:8px;padding:9px 11px;font-family:var(--mono);font-weight:600;color:var(--accent);text-align:center;" id="f-matricula-total">0</div>
+        </div>
+      </div>
+      <div class="field-label" style="margin-bottom:8px;">Personal</div>
+      <div class="fields f3" style="margin-bottom:14px;">
         <div class="field">
           <label class="field-label">Secciones</label>
           <input type="number" id="f-secciones" min="0">
@@ -432,13 +520,40 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
           <label class="field-label">Personal docente</label>
           <input type="number" id="f-docentes" min="0">
         </div>
+        <div class="field">
+          <label class="field-label">Personal administrativo</label>
+          <input type="number" id="f-administrativo" min="0">
+        </div>
+        <div class="field">
+          <label class="field-label">Auxiliares</label>
+          <input type="number" id="f-auxiliares" min="0">
+        </div>
+        <div class="field">
+          <label class="field-label">Cocineros</label>
+          <input type="number" id="f-cocineros" min="0">
+        </div>
+      </div>
+      <div class="field-label" style="margin-bottom:8px;">Servicio alimentario</div>
+      <div class="fields f3" style="margin-bottom:14px;">
+        <div class="field">
+          <label class="field-label">Desayuno</label>
+          <select id="f-desayuno"><option value="">…</option><option value="si">Sí</option><option value="no">No</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">Almuerzo</label>
+          <select id="f-almuerzo"><option value="">…</option><option value="si">Sí</option><option value="no">No</option></select>
+        </div>
+        <div class="field">
+          <label class="field-label">Merienda</label>
+          <select id="f-merienda"><option value="">…</option><option value="si">Sí</option><option value="no">No</option></select>
+        </div>
       </div>
       <div style="border-top:1px solid var(--gray-100);padding-top:12px;">
         <div class="field-label" style="margin-bottom:8px;">Referente institucional</div>
         <div class="fields f3">
           <div class="field span2">
             <label class="field-label">Nombre y cargo <span class="req">*</span></label>
-            <input type="text" id="f-ref-nombre" placeholder="ej: María López, Directora" oninput="updateProgress()">
+            <input type="text" id="f-ref-nombre" placeholder="ej: LÓPEZ MARÍA, Directora" oninput="updateProgress()">
             <span class="field-error" id="e-ref-nombre">Obligatorio</span>
           </div>
           <div class="field">
@@ -488,11 +603,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
           <span class="estado-name">Óptimo</span><span class="estado-pct">91–100%</span>
         </label>
       </div>
-      <div class="fields f2" style="margin-top:12px;">
-        <div class="field">
-          <label class="field-label">% funcionamiento estimado</label>
-          <input type="number" id="f-pct-gral" min="0" max="100" placeholder="0–100">
-        </div>
+      <div class="fields f1" style="margin-top:12px;">
         <div class="field">
           <label class="field-label">Observación general</label>
           <input type="text" id="f-obs-gral">
@@ -551,13 +662,16 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
               <th class="col-tipo">Sector</th>
               <th class="col-id">Identificador</th>
               <th class="col-planta">Planta</th>
-              <th class="col-uso">Uso</th>
+              <th class="col-uso">En uso</th>
               <th class="col-comp">Componente</th>
               <th>Problema detectado</th>
-              <th class="col-cant">Total</th>
-              <th class="col-pct">% func</th>
+              <th class="col-cant">Cantidad</th>
+              <th class="col-un">Unidad</th>
+              <th class="col-afect">Afectada</th>
+              <th class="col-pct">% afect.</th>
               <th class="col-imp">IMP</th>
               <th class="col-int">INT</th>
+              <th class="col-fotos">Fotos</th>
               <th class="col-del"></th>
             </tr>
           </thead>
@@ -608,8 +722,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   <div class="section">
     <div class="section-head">
       <span class="section-num">08</span>
-      <span class="section-title">Fotos de problemas</span>
-      <span class="section-q">No mezclar con fachada</span>
+      <span class="section-title">Otras imágenes de referencia</span>
+      <span class="section-q">Imágenes generales de la obra</span>
     </div>
     <div class="section-body">
       <div class="foto-grid" id="fotos-problemas"></div>
@@ -658,7 +772,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
         <div class="fields f2">
           <div class="field">
             <label class="field-label">ID del edificio en el sistema</label>
-            <input type="text" id="f-edificio-id" placeholder="ej: ED-001">
+            <input type="text" id="f-edificio-id" readonly style="background:var(--gray-100);font-family:var(--mono);font-size:12px;" placeholder="Se genera al enviar">
           </div>
           <div class="field">
             <label class="field-label">Hora de cierre</label>
@@ -675,11 +789,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 
 </div><!-- /content -->
 
-<!-- BOTTOM ACTIONS -->
-<div class="bottom-actions">
-  <button class="btn-borrador" onclick="guardarBorrador()">Guardar borrador</button>
-  <button class="btn-enviar" id="btn-enviar" onclick="enviarRelevamiento()">Finalizar y enviar</button>
-</div>
+
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
