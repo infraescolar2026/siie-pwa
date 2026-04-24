@@ -8,10 +8,10 @@
 const APPS_SCRIPT_URL_REL = 'https://script.google.com/macros/s/AKfycbxDxiRPFcIgEOpkgGjE23IhDGOtwg_unDfAMPQRBpo0dglkXopT3q8ybb7sWJ6LRyiT4w/exec';
 
 const TIPOS_SECTOR = [
-  'Aula','Baño niñas','Baño varones','Baño docentes',
-  'Comedor','Cocina','Dirección','Secretaría',
-  'Biblioteca','SUM','Patio cubierto','Galería',
-  'Sala de máquinas','Depósito','Otro'
+  'Aula','Baño docentes','Baño niñas','Baño varones',
+  'Biblioteca','Cocina','Comedor','Depósito',
+  'Dirección','Galería','Patio cubierto','Sala de máquinas',
+  'Secretaría','SUM','Otro'
 ];
 
 const COMPONENTES = [
@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filas iniciales en la tabla
   for (let i = 0; i < 3; i++) addRow();
 
-  // Fotos iniciales de problemas
-  for (let i = 0; i < 4; i++) addFotoSlot();
+  // Fotos otras iniciales
+  for (let i = 0; i < 3; i++) addFotoOtra();
 
   // Restaurar borrador si existe
   restaurarBorrador();
@@ -124,6 +124,143 @@ function selEstado(el, val) {
   });
   el.classList.add('sel-' + val);
   updateProgress();
+}
+
+
+/* ── FUNCIONES NUEVAS v2 ── */
+
+function generarNombre() {
+  const tipo = document.getElementById('f-tipo')?.value || '';
+  const numero = document.getElementById('f-numero')?.value || '';
+  const nombreEl = document.getElementById('f-nombre');
+  if (nombreEl && tipo && numero) {
+    nombreEl.value = tipo + ' N° ' + numero;
+  }
+}
+
+function sincronizarInspector() {
+  const inspector = document.getElementById('f-inspector')?.value || '';
+  const firmaEl = document.getElementById('firma-inspector-nombre');
+  if (firmaEl) firmaEl.textContent = inspector || '—';
+}
+
+function calcularMatricula() {
+  const v = parseInt(document.getElementById('f-varones')?.value) || 0;
+  const m = parseInt(document.getElementById('f-mujeres')?.value) || 0;
+  const o = parseInt(document.getElementById('f-otros')?.value) || 0;
+  const d = parseInt(document.getElementById('f-discapacidad')?.value) || 0;
+  const total = v + m + o + d;
+  const el = document.getElementById('f-matricula-total');
+  if (el) el.textContent = total;
+}
+
+function extraerCoordenadas(url) {
+  if (!url) return;
+  // Patrones comunes de URLs de Google Maps
+  const patrones = [
+    /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,           // @lat,lng
+    /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,          // ll=lat,lng
+    /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,           // q=lat,lng
+    /place\/.*\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/, // place/@lat,lng
+  ];
+  for (const patron of patrones) {
+    const match = url.match(patron);
+    if (match) {
+      document.getElementById('f-latitud').value = match[1];
+      document.getElementById('f-longitud').value = match[2];
+      showToast('Coordenadas extraídas correctamente');
+      return;
+    }
+  }
+  // Si no encontró coordenadas directas, puede ser un link corto
+  if (url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps')) {
+    showToast('Link corto detectado · las coordenadas se resolverán al enviar');
+    document.getElementById('f-latitud').value = url;
+    document.getElementById('f-longitud').value = '';
+  }
+}
+
+function descargarPDF() {
+  const data = recopilarDatos();
+  const nombre = data.identificacion?.nombre || 'Relevamiento';
+  const fecha = data.gestion?.fecha_relevamiento || new Date().toLocaleDateString('es-AR');
+  const inspector = data.gestion?.inspector || '';
+
+  let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Relevamiento - ${nombre}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11pt;color:#000;margin:20mm;}
+    h1{font-size:16pt;border-bottom:2px solid #000;padding-bottom:6px;}
+    h2{font-size:12pt;background:#eee;padding:4px 8px;margin-top:16px;}
+    table{width:100%;border-collapse:collapse;margin-top:8px;}
+    th,td{border:1px solid #999;padding:4px 6px;font-size:9pt;}
+    th{background:#eee;font-weight:bold;}
+    .field{display:flex;gap:8px;margin-bottom:6px;}
+    .label{font-weight:bold;min-width:140px;}
+    .firma-row{display:flex;gap:40px;margin-top:40px;}
+    .firma-block{flex:1;border-top:1px solid #000;padding-top:4px;font-size:9pt;}
+    @media print{body{margin:10mm;}}
+  </style></head><body>
+  <h1>SIIE · Relevamiento General</h1>
+  <div class="field"><span class="label">Establecimiento:</span><span>${data.identificacion?.nombre || '—'}</span></div>
+  <div class="field"><span class="label">Delegación:</span><span>${data.identificacion?.delegacion || '—'}</span></div>
+  <div class="field"><span class="label">Dirección:</span><span>${data.identificacion?.direccion || '—'}</span></div>
+  <div class="field"><span class="label">Inspector:</span><span>${inspector}</span></div>
+  <div class="field"><span class="label">Fecha:</span><span>${fecha}</span></div>
+
+  <h2>Datos institucionales</h2>
+  <div class="field"><span class="label">Matrícula total:</span><span>${data.datos_institucionales?.matricula_total || '—'}</span></div>
+  <div class="field"><span class="label">Secciones:</span><span>${data.datos_institucionales?.secciones || '—'}</span></div>
+  <div class="field"><span class="label">Turnos:</span><span>${data.datos_institucionales?.turnos || '—'}</span></div>
+
+  <h2>Sectores relevados</h2>
+  <table><thead><tr>
+    <th>#</th><th>Sector</th><th>Identificador</th><th>Planta</th><th>En uso</th>
+    <th>Componente</th><th>Problema</th><th>Cant.</th><th>Un.</th><th>Afect.</th><th>%</th><th>IMP</th><th>INT</th>
+  </tr></thead><tbody>`;
+
+  (data.sectores || []).forEach((s, i) => {
+    html += `<tr>
+      <td>${i+1}</td><td>${s.tipo||''}</td><td>${s.identificador||''}</td><td>${s.planta||''}</td>
+      <td>${s.en_uso||''}</td><td>${s.componente||''}</td><td>${s.problema||''}</td>
+      <td>${s.cantidad||''}</td><td>${s.unidad||''}</td><td>${s.afectada||''}</td>
+      <td>${s.pct_afectado||''}</td><td>${s.impide||''}</td><td>${s.intervencion||''}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>
+  <h2>Observaciones generales</h2>
+  <p>${data.observaciones_generales || '—'}</p>
+  <div class="firma-row">
+    <div class="firma-block">Inspector / Relevador: ${inspector}</div>
+    <div class="firma-block">Referente institucional: ${data.datos_institucionales?.referente_nombre || ''}</div>
+    <div class="firma-block">Fecha y hora de cierre: ${fecha}</div>
+  </div>
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Relevamiento_' + (nombre.replace(/\s+/g,'_')) + '_' + fecha.replace(/\//g,'-') + '.html';
+  a.click();
+  showToast('PDF generado · abrí el archivo y usá Ctrl+P para imprimir');
+}
+
+let fotosOtrasCount = 0;
+function addFotoOtra() {
+  fotosOtrasCount++;
+  const n = fotosOtrasCount;
+  const div = document.createElement('div');
+  const slotId = 'otra-slot-' + n;
+  const prevId = 'otra-prev-' + n;
+  div.innerHTML = `<div class="foto-slot" id="${slotId}">
+    <input type="file" accept="image/*" capture="environment" onchange="onFotoChange(this,'${slotId}','${prevId}')">
+    <svg class="foto-slot-icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span class="foto-slot-num">IMG-0${n}</span>
+    <img class="foto-preview-img" id="${prevId}" style="display:none;" alt="">
+  </div>`;
+  const grid = document.getElementById('fotos-otras');
+  if (grid) grid.appendChild(div);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -283,20 +420,25 @@ function comprimirFoto(file, maxSize, quality, callback) {
 function recopilarDatos() {
   // Sectores
   const sectores = [];
-  document.querySelectorAll('#sector-tbody tr').forEach(tr => {
-    const cells = tr.querySelectorAll('input,select,textarea');
-    if (cells.length < 10) return;
+  document.querySelectorAll('#sector-tbody tr').forEach((tr, idx) => {
+    const n = idx + 1;
+    const selects = tr.querySelectorAll('select');
+    const inputs = tr.querySelectorAll('input[type=text],input[type=number]');
+    const textarea = tr.querySelector('textarea');
+    const pctEl = document.getElementById('pct-' + tr.id.replace('row-',''));
     sectores.push({
-      tipo:                 cells[0]?.value || '',
-      identificador:        cells[1]?.value || '',
-      planta:               cells[2]?.value || '',
-      en_uso:               cells[3]?.value || '',
-      componente:           cells[4]?.value || '',
-      problema:             cells[5]?.value || '',
-      total:                cells[6]?.value || '',
-      pct_func:             cells[7]?.value || '',
-      impide:               cells[8]?.value || '',
-      requiere_intervencion:cells[9]?.value || '',
+      tipo:                 selects[0]?.value || '',
+      identificador:        inputs[0]?.value || '',
+      planta:               selects[1]?.value || '',
+      en_uso:               selects[2]?.value || '',
+      componente:           selects[3]?.value || '',
+      problema:             textarea?.value || '',
+      cantidad:             inputs[1]?.value || '',
+      unidad:               selects[4]?.value || '',
+      afectada:             inputs[2]?.value || '',
+      pct_afectado:         pctEl?.textContent || '',
+      impide:               selects[5]?.value || '',
+      requiere_intervencion:selects[6]?.value || '',
     });
   });
 
@@ -313,6 +455,9 @@ function recopilarDatos() {
       direccion:  document.getElementById('f-direccion')?.value || '',
       telefono:   document.getElementById('f-tel')?.value || '',
       email:      document.getElementById('f-email')?.value || '',
+      latitud:    document.getElementById('f-latitud')?.value || '',
+      longitud:   document.getElementById('f-longitud')?.value || '',
+      gmaps:      document.getElementById('f-gmaps')?.value || '',
     },
     gestion: {
       inspector:            document.getElementById('f-inspector')?.value || '',
@@ -323,13 +468,23 @@ function recopilarDatos() {
       edificio_id:          document.getElementById('f-edificio-id')?.value || '',
     },
     datos_institucionales: {
-      matricula:        document.getElementById('f-matricula')?.value || '',
-      secciones:        document.getElementById('f-secciones')?.value || '',
-      turnos:           document.getElementById('f-turnos')?.value || '',
-      docentes:         document.getElementById('f-docentes')?.value || '',
-      referente_nombre: document.getElementById('f-ref-nombre')?.value || '',
-      referente_cel:    document.getElementById('f-ref-cel')?.value || '',
-      referente_canal:  document.getElementById('f-ref-canal')?.value || '',
+      varones:           document.getElementById('f-varones')?.value || '',
+      mujeres:           document.getElementById('f-mujeres')?.value || '',
+      otros:             document.getElementById('f-otros')?.value || '',
+      discapacidad:      document.getElementById('f-discapacidad')?.value || '',
+      matricula_total:   document.getElementById('f-matricula-total')?.textContent || '0',
+      secciones:         document.getElementById('f-secciones')?.value || '',
+      turnos:            document.getElementById('f-turnos')?.value || '',
+      docentes:          document.getElementById('f-docentes')?.value || '',
+      administrativo:    document.getElementById('f-administrativo')?.value || '',
+      auxiliares:        document.getElementById('f-auxiliares')?.value || '',
+      cocineros:         document.getElementById('f-cocineros')?.value || '',
+      desayuno:          document.getElementById('f-desayuno')?.value || '',
+      almuerzo:          document.getElementById('f-almuerzo')?.value || '',
+      merienda:          document.getElementById('f-merienda')?.value || '',
+      referente_nombre:  document.getElementById('f-ref-nombre')?.value || '',
+      referente_cel:     document.getElementById('f-ref-cel')?.value || '',
+      referente_canal:   document.getElementById('f-ref-canal')?.value || '',
     },
     estado_general: {
       estado:              document.querySelector('input[name="estado_gral"]:checked')?.value || '',
@@ -456,6 +611,9 @@ async function enviarRelevamiento() {
   const data = recopilarDatos();
   const user = JSON.parse(localStorage.getItem('siie_user') || '{}');
   data.email = user.email || '';
+  data._id_generado = 'REL-' + Date.now();
+  const idEl = document.getElementById('f-edificio-id');
+  if (idEl) idEl.value = data._id_generado;
 
   // Sin conexión → guardar como borrador pendiente de sync
   if (!navigator.onLine) {
