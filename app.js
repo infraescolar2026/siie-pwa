@@ -251,7 +251,7 @@ function renderActionItem(a) {
   const hrefs = {
     relevamiento: 'relevamiento.html',
     inspeccion: 'inspeccion.html',
-    intervencion: 'relevamiento.html',
+    intervencion: 'intervencion.html',
     mapa: 'mapa.html',
     tabla: null,
     dashboard: 'dashboard.html',
