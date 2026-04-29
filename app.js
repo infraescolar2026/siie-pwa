@@ -484,24 +484,67 @@ function abrirBorrador(key) {
    API: COMUNICACIÓN CON APPS SCRIPT
 ══════════════════════════════════════════════════════ */
 async function apiCall(endpoint, body = null, method = null) {
-  const url = new URL(CONFIG.APPS_SCRIPT_URL);
-  url.searchParams.set('action', endpoint);
-
-  if (state.user?.email) {
-    url.searchParams.set('email', state.user.email);
+  // Para GET usamos JSONP para evitar CORS con cuentas Gmail personales
+  if (!body && (!method || method === 'GET')) {
+    return apiCallJSONP(endpoint);
   }
+  // Para POST usamos iframe
+  return apiCallIframe(endpoint, body);
+}
 
-  const options = {
-    method: body ? 'POST' : 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  };
+async function apiCallJSONP(endpoint) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'siieJSONP_' + endpoint + '_' + Date.now();
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 10000);
 
-  if (method) options.method = method;
-  if (body) options.body = JSON.stringify(body);
+    const url = new URL(CONFIG.APPS_SCRIPT_URL);
+    url.searchParams.set('action', endpoint);
+    url.searchParams.set('email', state.user?.email || '');
+    url.searchParams.set('callback', cbName);
 
-  const res = await fetch(url.toString(), options);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
+    }
+
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.src = url.toString();
+    script.onerror = () => { cleanup(); reject(new Error('Error de red')); };
+    document.head.appendChild(script);
+  });
+}
+
+async function apiCallIframe(endpoint, body) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve({ ok: false, error: 'Timeout' }), 15000);
+    const iframeName = 'siie_api_' + Date.now();
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeName; iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = CONFIG.APPS_SCRIPT_URL + '?action=' + endpoint + '&email=' + encodeURIComponent(state.user?.email || '');
+    form.target = iframeName; form.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(body);
+    form.appendChild(input); document.body.appendChild(form);
+    iframe.onload = () => {
+      try {
+        const txt = iframe.contentDocument?.body?.innerText || '';
+        const result = JSON.parse(txt);
+        iframe.remove(); form.remove(); resolve(result);
+      } catch(e) { iframe.remove(); form.remove(); resolve({ ok: true }); }
+    };
+    form.submit();
+  });
 }
 
 /* Auth via GET usando no-cors + iframe trick para evitar CORS con cuentas Gmail */
