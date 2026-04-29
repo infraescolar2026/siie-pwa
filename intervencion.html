@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0e">
+<title>SIIE · Intervención</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:#0f0f0e; --gray-700:#3a3a37; --gray-500:#6b6b66; --gray-400:#999993;
+  --gray-200:#e2e2dc; --gray-100:#eeede8; --gray-50:#f7f6f2;
+  --accent:#0f4c81; --accent-l:#e6eff8;
+  --ok:#1a5c3a; --ok-l:#e8f5ee; --ok-b:#1D9E75;
+  --warn:#7a4800; --warn-l:#fff3e0; --warn-b:#BA7517;
+  --danger:#8b1a1a; --danger-l:#fef2f2;
+  --purple:#3c3489; --purple-l:#eeedfe;
+  --font:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace; --r:10px;
+  --bar-h:48px; --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:var(--font);font-size:15px;color:var(--black);background:var(--gray-50);min-height:100vh;}
+
+.topbar{height:var(--bar-h);background:var(--black);display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:100;padding-top:env(safe-area-inset-top,0px);}
+.btn-back{background:none;border:none;color:white;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);font-size:13px;padding:0;}
+.btn-back svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.topbar-title{font-size:13px;color:#aaa;flex:1;}
+
+.progress-wrap{background:var(--gray-200);height:3px;position:sticky;top:var(--bar-h);z-index:99;}
+.progress-fill{height:100%;background:var(--ok-b);transition:width 0.3s;}
+
+.steps-nav{display:flex;overflow-x:auto;background:white;border-bottom:1px solid var(--gray-200);position:sticky;top:calc(var(--bar-h) + 3px);z-index:98;scrollbar-width:none;}
+.steps-nav::-webkit-scrollbar{display:none;}
+.step-btn{flex-shrink:0;padding:10px 14px;font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-400);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}
+.step-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.step-btn.done{color:var(--ok-b);}
+
+.content{padding:14px;max-width:680px;margin:0 auto;padding-bottom:20px;}
+
+.card{background:white;border:1px solid var(--gray-200);border-radius:var(--r);margin-bottom:12px;overflow:hidden;}
+.card-head{background:var(--black);color:white;padding:10px 14px;display:flex;align-items:center;gap:8px;}
+.card-num{font-family:var(--mono);font-size:11px;opacity:0.5;}
+.card-title{font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;}
+.card-q{margin-left:auto;font-size:11px;opacity:0.45;font-style:italic;}
+.card-body{padding:14px;}
+
+.fields{display:grid;gap:12px 14px;}
+.f2{grid-template-columns:1fr 1fr;}
+.f3{grid-template-columns:1fr 1fr 1fr;}
+.span2{grid-column:span 2;}
+.span3{grid-column:span 3;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field-label{font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-500);}
+.req{color:var(--danger);}
+
+input,select,textarea{font-family:var(--font);font-size:14px;color:var(--black);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:9px 11px;width:100%;outline:none;transition:border-color 0.15s;-webkit-appearance:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:white;}
+input[readonly]{background:var(--gray-100);color:var(--gray-500);}
+input[type=number]{text-align:center;}
+textarea{resize:vertical;min-height:72px;line-height:1.5;}
+select{cursor:pointer;}
+
+/* EJECUTOR */
+.ejecutor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.ejecutor-opt{border:2px solid var(--gray-200);border-radius:var(--r);padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative;}
+.ejecutor-opt input{position:absolute;opacity:0;width:0;height:0;}
+.ejecutor-opt:active{transform:scale(0.97);}
+.ejecutor-opt.selected{border-color:var(--accent);background:var(--accent-l);}
+.ejecutor-icon{font-size:24px;display:block;margin-bottom:6px;}
+.ejecutor-label{font-size:13px;font-weight:600;display:block;}
+
+/* EDIFICIO SEARCH */
+.edificio-search{position:relative;}
+.edificio-results{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--gray-200);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;display:none;}
+.edificio-result-item{padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:0.5px solid var(--gray-100);}
+.edificio-result-item:last-child{border-bottom:none;}
+.edificio-result-item:hover{background:var(--accent-l);}
+.edificio-result-meta{font-size:11px;color:var(--gray-400);}
+.edificio-card{background:var(--accent-l);border:1px solid var(--accent);border-radius:8px;padding:12px 14px;display:none;margin-top:8px;}
+.edificio-card.show{display:block;}
+.edificio-card-nombre{font-size:15px;font-weight:600;margin-bottom:2px;}
+.edificio-card-meta{font-size:12px;color:var(--accent);}
+.edificio-card-btn{margin-top:6px;background:none;border:1px solid var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--accent);cursor:pointer;font-family:var(--font);}
+
+/* PROBLEMAS */
+.problema-item{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;}
+.problema-check{width:20px;height:20px;border:2px solid var(--gray-300);border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:2px;transition:all 0.15s;}
+.problema-check.checked{background:var(--accent);border-color:var(--accent);}
+.problema-check.checked::after{content:'✓';color:white;font-size:13px;font-weight:600;}
+.problema-info{flex:1;}
+.problema-nombre{font-size:13px;font-weight:500;}
+.problema-meta{font-size:11px;color:var(--gray-400);margin-top:2px;}
+.problema-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:4px;}
+
+/* ITEMS DE INTERVENCIÓN */
+.item-interv{background:white;border:1px solid var(--gray-200);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+.item-interv-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.item-interv-num{font-family:var(--mono);font-size:11px;background:var(--gray-100);padding:2px 8px;border-radius:20px;color:var(--gray-500);}
+.item-interv-nombre{font-size:13px;font-weight:500;flex:1;}
+
+/* AVANCE */
+.avance-bar-wrap{background:var(--gray-100);border-radius:20px;height:10px;overflow:hidden;margin-top:6px;}
+.avance-bar{height:100%;background:var(--ok-b);border-radius:20px;transition:width 0.4s;}
+
+/* FOTOS */
+.foto-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.foto-slot{border:2px dashed var(--gray-300);border-radius:8px;background:var(--gray-50);aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;position:relative;overflow:hidden;transition:all 0.15s;}
+.foto-slot.has-foto{border-style:solid;border-color:var(--ok-b);}
+.foto-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.foto-slot svg{width:28px;height:28px;stroke:var(--gray-300);fill:none;stroke-width:1.5;}
+.foto-slot span{font-size:10px;color:var(--gray-400);}
+.foto-preview{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;display:none;}
+
+/* FIRMA */
+.firma-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.firma-block{display:flex;flex-direction:column;gap:6px;}
+.firma-line{border-bottom:2px solid var(--black);padding-bottom:28px;}
+.firma-label{font-size:11px;color:var(--gray-500);letter-spacing:0.07em;text-transform:uppercase;}
+
+/* BOTONES */
+.btn-enviar-wrap{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;}
+.btn-pdf{background:var(--gray-700);border:none;border-radius:8px;padding:12px 16px;font-family:var(--font);font-size:13px;font-weight:600;color:white;cursor:pointer;}
+.btn-pdf-avance{background:var(--purple,#3c3489);border:none;border-radius:8px;padding:12px 16px;font-family:var(--font);font-size:13px;font-weight:600;color:white;cursor:pointer;}
+.btn-enviar{flex:1;background:var(--accent);border:none;border-radius:8px;padding:12px;font-family:var(--font);font-size:14px;font-weight:600;color:white;cursor:pointer;}
+
+.instruccion{background:var(--accent-l);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px;color:var(--accent);margin-bottom:12px;line-height:1.5;}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.b-ok{background:var(--ok-l);color:var(--ok);}
+.b-warn{background:var(--warn-l);color:var(--warn);}
+.b-danger{background:var(--danger-l);color:var(--danger);}
+.b-info{background:var(--accent-l);color:var(--accent);}
+
+.toast{position:fixed;bottom:calc(24px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:#1c1c1a;color:white;border-radius:8px;padding:10px 18px;font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:12px;}
+.overlay.show{display:flex;}
+.overlay span{color:white;font-size:14px;font-weight:500;}
+.spinner svg{width:36px;height:36px;stroke:white;fill:none;stroke-width:2;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+@media(max-width:480px){
+  .ejecutor-grid{grid-template-columns:1fr;}
+  .f3{grid-template-columns:1fr 1fr;}
+  .firma-grid{grid-template-columns:1fr;}
+}
+
+/* PRINT */
+@media print{
+  .topbar,.steps-nav,.progress-wrap,.btn-enviar-wrap,.no-print{display:none!important;}
+  body{background:white;}
+  .content{max-width:100%;padding:0;}
+  .card{border:none;break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="btn-back" onclick="history.back()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Volver
+  </button>
+  <span class="topbar-title" id="topbar-nombre">Registrar intervención</span>
+</div>
+
+<div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+<div class="steps-nav">
+  <button class="step-btn active" id="step-btn-1" onclick="irStep(1)">01 Ejecutor</button>
+  <button class="step-btn" id="step-btn-2" onclick="irStep(2)">02 Edificio</button>
+  <button class="step-btn" id="step-btn-3" onclick="irStep(3)">03 Problemas</button>
+  <button class="step-btn" id="step-btn-4" onclick="irStep(4)">04 Inicio</button>
+  <button class="step-btn" id="step-btn-5" onclick="irStep(5)">05 Avance</button>
+  <button class="step-btn" id="step-btn-6" onclick="irStep(6)">06 Cierre</button>
+  <button class="step-btn" id="step-btn-7" onclick="irStep(7)">07 Firma</button>
+</div>
+
+<div class="content">
+
+<!-- ─── STEP 1: EJECUTOR ─── -->
+<div id="step-1">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">01</span>
+      <span class="card-title">¿Quién ejecuta la intervención?</span>
+    </div>
+    <div class="card-body">
+      <div class="ejecutor-grid">
+        <label class="ejecutor-opt" onclick="selEjecutor(this,'empresa')" id="ej-empresa">
+          <input type="radio" name="ejecutor" value="empresa">
+          <span class="ejecutor-icon">🏗️</span>
+          <span class="ejecutor-label">Empresa</span>
+        </label>
+        <label class="ejecutor-opt" onclick="selEjecutor(this,'concejo')" id="ej-concejo">
+          <input type="radio" name="ejecutor" value="concejo">
+          <span class="ejecutor-icon">🏛️</span>
+          <span class="ejecutor-label">Concejo Escolar</span>
+        </label>
+        <label class="ejecutor-opt" onclick="selEjecutor(this,'otro')" id="ej-otro">
+          <input type="radio" name="ejecutor" value="otro">
+          <span class="ejecutor-icon">🔧</span>
+          <span class="ejecutor-label">Otro</span>
+        </label>
+      </div>
+
+      <!-- Datos del ejecutor (aparece según selección) -->
+      <div id="datos-empresa" style="display:none;">
+        <div class="fields f2">
+          <div class="field span2">
+            <label class="field-label">Nombre de la empresa <span class="req">*</span></label>
+            <input type="text" id="empresa-nombre" placeholder="Razón social">
+          </div>
+          <div class="field">
+            <label class="field-label">CUIT</label>
+            <input type="text" id="empresa-cuit" placeholder="XX-XXXXXXXX-X">
+          </div>
+          <div class="field">
+            <label class="field-label">Responsable / representante</label>
+            <input type="text" id="empresa-responsable">
+          </div>
+          <div class="field">
+            <label class="field-label">Teléfono de contacto</label>
+            <input type="tel" id="empresa-tel">
+          </div>
+          <div class="field">
+            <label class="field-label">N° de expediente / contrato</label>
+            <input type="text" id="empresa-expediente">
+          </div>
+        </div>
+      </div>
+
+      <div id="datos-concejo" style="display:none;">
+        <div class="fields f2">
+          <div class="field">
+            <label class="field-label">Responsable del Concejo</label>
+            <input type="text" id="concejo-responsable">
+          </div>
+          <div class="field">
+            <label class="field-label">N° de resolución / expediente</label>
+            <input type="text" id="concejo-expediente">
+          </div>
+        </div>
+      </div>
+
+      <div id="datos-otro" style="display:none;">
+        <div class="fields f2">
+          <div class="field span2">
+            <label class="field-label">Descripción del ejecutor</label>
+            <input type="text" id="otro-descripcion" placeholder="ej: Cooperadora · Municipio · Voluntariado">
+          </div>
+          <div class="field">
+            <label class="field-label">Responsable</label>
+            <input type="text" id="otro-responsable">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STEP 2: EDIFICIO ─── -->
+<div id="step-2" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">02</span>
+      <span class="card-title">Establecimiento</span>
+    </div>
+    <div class="card-body">
+      <div class="field" style="margin-bottom:10px;">
+        <label class="field-label">Buscar establecimiento <span class="req">*</span></label>
+        <div class="edificio-search">
+          <input type="text" id="edificio-search-input"
+            placeholder="Escribí nombre, número o delegación…"
+            oninput="buscarEdificio(this.value)"
+            autocomplete="off">
+          <div class="edificio-results" id="edificio-results"></div>
+        </div>
+      </div>
+      <div class="edificio-card" id="edificio-card">
+        <div class="edificio-card-nombre" id="ec-nombre">—</div>
+        <div class="edificio-card-meta" id="ec-meta">—</div>
+        <button class="edificio-card-btn" onclick="limpiarEdificio()">Cambiar edificio</button>
+      </div>
+      <div id="datos-edificio" style="display:none;margin-top:12px;">
+        <div class="fields f3">
+          <div class="field">
+            <label class="field-label">N° establecimiento</label>
+            <input type="text" id="ed-numero" readonly>
+          </div>
+          <div class="field">
+            <label class="field-label">Delegación</label>
+            <input type="text" id="ed-delegacion" readonly>
+          </div>
+          <div class="field">
+            <label class="field-label">Inspector</label>
+            <input type="text" id="ed-inspector" readonly>
+          </div>
+          <div class="field span2">
+            <label class="field-label">Dirección</label>
+            <input type="text" id="ed-direccion" readonly>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STEP 3: PROBLEMAS A INTERVENIR ─── -->
+<div id="step-3" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">03</span>
+      <span class="card-title">Problemas que se van a resolver</span>
+      <span class="card-q">Del relevamiento del edificio</span>
+    </div>
+    <div class="card-body">
+      <div class="instruccion">Seleccioná los problemas detectados en el relevamiento que esta intervención va a resolver. Podés seleccionar varios.</div>
+      <div id="problemas-list">
+        <div style="color:var(--gray-400);font-size:13px;text-align:center;padding:20px;">
+          Primero seleccioná el edificio en el paso 02
+        </div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Descripción general de la intervención</div>
+        <textarea id="int-descripcion" placeholder="Describir el alcance general de los trabajos…" style="min-height:80px;"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STEP 4: INICIO ─── -->
+<div id="step-4" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">04</span>
+      <span class="card-title">Inicio de la intervención</span>
+    </div>
+    <div class="card-body">
+      <div class="fields f3" style="margin-bottom:14px;">
+        <div class="field">
+          <label class="field-label">Fecha de inicio <span class="req">*</span></label>
+          <input type="date" id="int-fecha-inicio">
+        </div>
+        <div class="field">
+          <label class="field-label">Fecha estimada de fin</label>
+          <input type="date" id="int-fecha-fin-est">
+        </div>
+        <div class="field">
+          <label class="field-label">Inspector que controla</label>
+          <select id="int-inspector">
+            <option value="">Seleccionar…</option>
+            <option>ROMANO ROCIO E.</option>
+            <option>LLERAL JULIANA</option>
+            <option>ETCHEGOYEN FERMIN</option>
+            <option>PANETTA JOSÉ LUIS</option>
+            <option>MARTINEZ ROBERTO G.</option>
+            <option>MARGARITINI MARIANO</option>
+            <option>GARRITANO CARLA G.</option>
+            <option>UCHA RAFAEL</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Items con cantidades contratadas -->
+      <div class="field-label" style="margin-bottom:10px;">Ítems contratados</div>
+      <div id="items-contratados"></div>
+      <div style="font-size:12px;color:var(--gray-400);margin-top:6px;font-style:italic;">Los ítems se generan automáticamente de los problemas seleccionados</div>
+
+      <!-- Fotos ANTES -->
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Fotos ANTES de la intervención <span style="color:var(--warn-b);">*</span></div>
+        <div class="foto-grid-2" id="fotos-antes"></div>
+        <button onclick="addFoto('antes')" style="width:100%;margin-top:8px;background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:8px;padding:8px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;">+ Agregar foto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STEP 5: AVANCE MENSUAL ─── -->
+<div id="step-5" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">05</span>
+      <span class="card-title">Avance mensual</span>
+      <span class="card-q">Para certificación</span>
+    </div>
+    <div class="card-body">
+      <div class="fields f2" style="margin-bottom:14px;">
+        <div class="field">
+          <label class="field-label">Mes de certificación</label>
+          <input type="month" id="avance-mes">
+        </div>
+        <div class="field">
+          <label class="field-label">Fecha de visita de control</label>
+          <input type="date" id="avance-fecha">
+        </div>
+      </div>
+
+      <!-- Avance por ítem -->
+      <div class="field-label" style="margin-bottom:10px;">Cantidades ejecutadas por ítem</div>
+      <div id="items-avance"></div>
+
+      <!-- Fotos de avance -->
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Fotos del avance</div>
+        <div class="foto-grid-2" id="fotos-avance"></div>
+        <button onclick="addFoto('avance')" style="width:100%;margin-top:8px;background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:8px;padding:8px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;">+ Agregar foto</button>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label class="field-label">Observaciones del avance</label>
+        <textarea id="avance-obs" placeholder="Estado de los trabajos, inconvenientes, aclaraciones…"></textarea>
+      </div>
+
+      <div class="btn-enviar-wrap no-print">
+        <button class="btn-pdf-avance" onclick="generarPDFAvance()">📊 Informe de avance mensual</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STEP 6: CIERRE ─── -->
+<div id="step-6" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">06</span>
+      <span class="card-title">Cierre de la intervención</span>
+    </div>
+    <div class="card-body">
+      <div class="fields f2" style="margin-bottom:14px;">
+        <div class="field">
+          <label class="field-label">Fecha de finalización real</label>
+          <input type="date" id="int-fecha-fin-real">
+        </div>
+        <div class="field">
+          <label class="field-label">Estado de cierre</label>
+          <select id="int-estado-cierre">
+            <option value="">Seleccionar…</option>
+            <option value="finalizada">Finalizada correctamente</option>
+            <option value="parcial">Parcialmente ejecutada</option>
+            <option value="rescindida">Rescindida</option>
+          </select>
+        </div>
+        <div class="field span2">
+          <label class="field-label">Resultado final</label>
+          <textarea id="int-resultado" placeholder="Describir cómo quedó la situación respecto al problema original…"></textarea>
+        </div>
+      </div>
+
+      <!-- Fotos DESPUÉS -->
+      <div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Fotos DESPUÉS de la intervención <span style="color:var(--warn-b);">*</span></div>
+        <div class="foto-grid-2" id="fotos-despues"></div>
+        <button onclick="addFoto('despues')" style="width:100%;margin-top:8px;background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:8px;padding:8px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;">+ Agregar foto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STEP 7: FIRMA ─── -->
+<div id="step-7" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">07</span>
+      <span class="card-title">Validación y firma</span>
+    </div>
+    <div class="card-body">
+      <div class="firma-grid">
+        <div class="firma-block">
+          <div class="firma-line"></div>
+          <div class="firma-label">Inspector que controla</div>
+          <div style="font-size:13px;color:var(--gray-500);margin-top:4px;" id="firma-inspector">—</div>
+        </div>
+        <div class="firma-block">
+          <div class="firma-line"></div>
+          <div class="firma-label">Representante del ejecutor</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-500);margin-bottom:8px;">Para uso del sistema</div>
+        <div class="fields f2">
+          <div class="field">
+            <label class="field-label">ID intervención (automático)</label>
+            <input type="text" id="f-id-int" readonly style="background:var(--gray-100);font-family:var(--mono);font-size:12px;" placeholder="Se genera al enviar">
+          </div>
+          <div class="field">
+            <label class="field-label">Fecha de certificación</label>
+            <input type="date" id="f-fecha-cert">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-enviar-wrap">
+        <button class="btn-pdf-avance" onclick="generarPDFAvance()">📊 PDF avance</button>
+        <button class="btn-pdf" onclick="generarPDFFinal()">📄 PDF final</button>
+        <button class="btn-enviar" onclick="enviarIntervencion()">Registrar intervención</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay">
+  <div class="spinner"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div>
+  <span id="overlay-text">Registrando intervención…</span>
+</div>
+
+<script>
+'use strict';
+
+const APPS_SCRIPT_URL_INT = 'https://script.google.com/macros/s/AKfycbxDxiRPFcIgEOpkgGjE23IhDGOtwg_unDfAMPQRBpo0dglkXopT3q8ybb7sWJ6LRyiT4w/exec';
+
+let currentStep = 1;
+let edificioSeleccionado = null;
+let edificiosCargados = [];
+let problemasSeleccionados = [];
+let fotosData = { antes: [], avance: [], despues: [] };
+let fotosCount = { antes: 0, avance: 0, despues: 0 };
+let ejecutorSeleccionado = '';
+let itemsContratados = [];
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('int-fecha-inicio').value = hoy;
+  document.getElementById('avance-fecha').value = hoy;
+  document.getElementById('f-fecha-cert').value = hoy;
+
+  const mes = hoy.slice(0, 7);
+  document.getElementById('avance-mes').value = mes;
+
+  cargarEdificios();
+  addFoto('antes');
+  addFoto('antes');
+  addFoto('avance');
+  addFoto('despues');
+  addFoto('despues');
+});
+
+/* ── NAVEGACIÓN ── */
+function irStep(n) {
+  document.getElementById('step-' + currentStep).style.display = 'none';
+  document.getElementById('step-btn-' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('step-' + n).style.display = 'block';
+  const btn = document.getElementById('step-btn-' + n);
+  btn.classList.add('active');
+  btn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  window.scrollTo({ top:0, behavior:'smooth' });
+  document.getElementById('progress-fill').style.width = Math.round((n/7)*100) + '%';
+
+  // Sincronizar inspector en firma
+  const insp = document.getElementById('int-inspector')?.value || '';
+  const firmaEl = document.getElementById('firma-inspector');
+  if (firmaEl) firmaEl.textContent = insp || '—';
+
+  // Al entrar al paso 5 (avance) renderizar ítems
+  if (n === 5) renderItemsAvance();
+}
+
+/* ── EJECUTOR ── */
+function selEjecutor(el, val) {
+  document.querySelectorAll('.ejecutor-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  ejecutorSeleccionado = val;
+  document.getElementById('datos-empresa').style.display = val === 'empresa' ? 'block' : 'none';
+  document.getElementById('datos-concejo').style.display = val === 'concejo' ? 'block' : 'none';
+  document.getElementById('datos-otro').style.display   = val === 'otro'    ? 'block' : 'none';
+}
+
+/* ── EDIFICIO ── */
+async function cargarEdificios() {
+  try {
+    const cached = localStorage.getItem('siie_edificios_cache');
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      edificiosCargados = data || [];
+    }
+  } catch(e) {}
+
+  try {
+    const user = JSON.parse(localStorage.getItem('siie_user') || '{}');
+    const url = new URL(APPS_SCRIPT_URL_INT);
+    url.searchParams.set('action', 'edificios');
+    url.searchParams.set('email', user.email || '');
+    const res = await fetch(url.toString());
+    const result = await res.json();
+    if (result.ok && result.data) {
+      edificiosCargados = result.data;
+      localStorage.setItem('siie_edificios_cache', JSON.stringify({ data: result.data, ts: Date.now() }));
+    }
+  } catch(e) {}
+}
+
+function buscarEdificio(query) {
+  const results = document.getElementById('edificio-results');
+  if (!query || query.length < 2) { results.style.display = 'none'; return; }
+  const q = query.toLowerCase();
+  const filtrados = edificiosCargados.filter(e =>
+    (e.nombre||'').toLowerCase().includes(q) ||
+    (e.numero_establecimiento||'').toLowerCase().includes(q) ||
+    (e.delegacion||'').toLowerCase().includes(q)
+  ).slice(0, 8);
+
+  if (!filtrados.length) {
+    results.innerHTML = '<div class="edificio-result-item" style="color:var(--gray-400);">Sin resultados</div>';
+    results.style.display = 'block';
+    return;
+  }
+  results.innerHTML = filtrados.map(e => `
+    <div class="edificio-result-item" onclick="seleccionarEdificio(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+      <div>${e.nombre || '—'}</div>
+      <div class="edificio-result-meta">${e.delegacion || ''} · N° ${e.numero_establecimiento || '—'}</div>
+    </div>`).join('');
+  results.style.display = 'block';
+}
+
+function seleccionarEdificio(e) {
+  edificioSeleccionado = e;
+  document.getElementById('edificio-results').style.display = 'none';
+  document.getElementById('edificio-search-input').value = e.nombre || '';
+  document.getElementById('ec-nombre').textContent = e.nombre || '—';
+  document.getElementById('ec-meta').textContent = [e.delegacion, e.direccion].filter(Boolean).join(' · ');
+  document.getElementById('edificio-card').classList.add('show');
+  document.getElementById('ed-numero').value = e.numero_establecimiento || '';
+  document.getElementById('ed-delegacion').value = e.delegacion || '';
+  document.getElementById('ed-inspector').value = e.inspector_id || '';
+  document.getElementById('ed-direccion').value = e.direccion || '';
+  document.getElementById('datos-edificio').style.display = 'block';
+  document.getElementById('topbar-nombre').textContent = e.nombre || 'Intervención';
+  cargarProblemas(e);
+}
+
+function limpiarEdificio() {
+  edificioSeleccionado = null;
+  document.getElementById('edificio-search-input').value = '';
+  document.getElementById('edificio-card').classList.remove('show');
+  document.getElementById('datos-edificio').style.display = 'none';
+  document.getElementById('topbar-nombre').textContent = 'Registrar intervención';
+  document.getElementById('problemas-list').innerHTML = '<div style="color:var(--gray-400);font-size:13px;text-align:center;padding:20px;">Primero seleccioná el edificio en el paso 02</div>';
+}
+
+/* ── PROBLEMAS ── */
+async function cargarProblemas(edificio) {
+  const list = document.getElementById('problemas-list');
+  list.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:12px;">Cargando problemas…</div>';
+
+  try {
+    const user = JSON.parse(localStorage.getItem('siie_user') || '{}');
+    const url = new URL(APPS_SCRIPT_URL_INT);
+    url.searchParams.set('action', 'edificio');
+    url.searchParams.set('id', edificio.id_edificio);
+    url.searchParams.set('email', user.email || '');
+    const res = await fetch(url.toString());
+    const result = await res.json();
+
+    if (result.ok && result.data) {
+      const intervenciones = result.data.intervenciones || [];
+      if (intervenciones.length) {
+        renderProblemas(intervenciones);
+      } else {
+        list.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:12px;">No hay problemas registrados para este edificio aún.</div>';
+      }
+    }
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:12px;">Sin conexión · los problemas no se pudieron cargar.</div>';
+  }
+}
+
+function renderProblemas(problemas) {
+  const list = document.getElementById('problemas-list');
+  list.innerHTML = problemas.map((p, i) => {
+    const imp = p.impide_desarrollo_pedagogico;
+    const badge = imp ? '<span class="problema-badge" style="background:var(--danger-l);color:var(--danger);">Impide pedagógico</span>' :
+                        '<span class="problema-badge" style="background:var(--gray-100);color:var(--gray-500);">Sin impacto pedagógico</span>';
+    return `
+      <div class="problema-item" id="prob-${i}">
+        <div class="problema-check" id="check-${i}" onclick="toggleProblema(${i}, ${JSON.stringify(p).replace(/"/g,'&quot;')})"></div>
+        <div class="problema-info">
+          <div class="problema-nombre">${p.componente || '—'} · ${p.sector_id || ''}</div>
+          <div class="problema-meta">${p.descripcion_tecnica || p.tipo_intervencion || ''}</div>
+          ${badge}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleProblema(i, problema) {
+  const check = document.getElementById('check-' + i);
+  const idx = problemasSeleccionados.findIndex(p => p.id_intervencion === problema.id_intervencion);
+  if (idx >= 0) {
+    problemasSeleccionados.splice(idx, 1);
+    check.classList.remove('checked');
+  } else {
+    problemasSeleccionados.push(problema);
+    check.classList.add('checked');
+    // Agregar ítem contratado
+    if (!itemsContratados.find(it => it.id === problema.id_intervencion)) {
+      itemsContratados.push({
+        id: problema.id_intervencion,
+        descripcion: (problema.componente || '') + ' · ' + (problema.sector_id || ''),
+        unidad: 'U',
+        cantidad_contratada: '',
+        precio_unitario: '',
+      });
+      renderItemsContratados();
+    }
+  }
+}
+
+/* ── ÍTEMS CONTRATADOS ── */
+function renderItemsContratados() {
+  const cont = document.getElementById('items-contratados');
+  cont.innerHTML = itemsContratados.map((item, i) => `
+    <div class="item-interv" id="item-cont-${i}">
+      <div class="item-interv-header">
+        <span class="item-interv-num">Ítem ${i+1}</span>
+        <span class="item-interv-nombre">${item.descripcion}</span>
+      </div>
+      <div class="fields f3">
+        <div class="field">
+          <label class="field-label">Cantidad contratada</label>
+          <input type="number" min="0" placeholder="0"
+            onchange="itemsContratados[${i}].cantidad_contratada=this.value">
+        </div>
+        <div class="field">
+          <label class="field-label">Unidad</label>
+          <select onchange="itemsContratados[${i}].unidad=this.value">
+            <option>U</option><option>M2</option><option>M3</option>
+            <option>ML</option><option>GL</option><option>HS</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Precio unitario $</label>
+          <input type="number" min="0" placeholder="0.00"
+            onchange="itemsContratados[${i}].precio_unitario=this.value">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── ÍTEMS DE AVANCE ── */
+function renderItemsAvance() {
+  const cont = document.getElementById('items-avance');
+  if (!itemsContratados.length) {
+    cont.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px;">Seleccioná problemas en el paso 03 primero</div>';
+    return;
+  }
+  cont.innerHTML = itemsContratados.map((item, i) => {
+    const cant = parseFloat(item.cantidad_contratada) || 0;
+    return `
+      <div class="item-interv">
+        <div class="item-interv-header">
+          <span class="item-interv-num">Ítem ${i+1}</span>
+          <span class="item-interv-nombre">${item.descripcion}</span>
+        </div>
+        <div class="fields f3">
+          <div class="field">
+            <label class="field-label">Contratado</label>
+            <input type="text" value="${cant} ${item.unidad}" readonly style="background:var(--gray-100);">
+          </div>
+          <div class="field">
+            <label class="field-label">Ejecutado este mes</label>
+            <input type="number" min="0" max="${cant}" placeholder="0"
+              id="avance-cant-${i}"
+              oninput="calcAvance(${i},${cant})">
+          </div>
+          <div class="field">
+            <label class="field-label">% avance</label>
+            <div id="avance-pct-${i}" style="background:var(--accent-l);border-radius:8px;padding:9px 11px;font-family:var(--mono);font-weight:600;color:var(--accent);text-align:center;">0%</div>
+          </div>
+        </div>
+        <div class="avance-bar-wrap">
+          <div class="avance-bar" id="avance-bar-${i}" style="width:0%"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function calcAvance(i, total) {
+  const ejecutado = parseFloat(document.getElementById('avance-cant-' + i)?.value) || 0;
+  const pct = total > 0 ? Math.min(100, Math.round((ejecutado / total) * 100)) : 0;
+  const pctEl = document.getElementById('avance-pct-' + i);
+  const barEl = document.getElementById('avance-bar-' + i);
+  if (pctEl) pctEl.textContent = pct + '%';
+  if (barEl) barEl.style.width = pct + '%';
+}
+
+/* ── FOTOS ── */
+function addFoto(tipo) {
+  fotosCount[tipo]++;
+  const n = fotosCount[tipo];
+  const slotId = `foto-${tipo}-${n}`;
+  const prevId = `prev-${tipo}-${n}`;
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="foto-slot" id="${slotId}">
+      <input type="file" accept="image/*" capture="environment"
+        onchange="onFotoChange(this,'${slotId}','${prevId}','${tipo}')">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>${tipo === 'antes' ? 'ANTES' : tipo === 'despues' ? 'DESPUÉS' : 'AVANCE'} ${n}</span>
+      <img class="foto-preview" id="${prevId}" alt="">
+    </div>`;
+  document.getElementById('fotos-' + tipo).appendChild(div);
+}
+
+function onFotoChange(input, slotId, prevId, tipo) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById(prevId);
+    const slot = document.getElementById(slotId);
+    if (img) { img.src = e.target.result; img.style.display = 'block'; }
+    if (slot) slot.classList.add('has-foto');
+    fotosData[tipo].push(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── PDF AVANCE ── */
+function generarPDFAvance() {
+  const edificio = edificioSeleccionado;
+  const mes = document.getElementById('avance-mes')?.value || '';
+  const inspector = document.getElementById('int-inspector')?.value || '';
+  const fecha = document.getElementById('avance-fecha')?.value || '';
+
+  let itemsHTML = itemsContratados.map((item, i) => {
+    const ejecutado = parseFloat(document.getElementById('avance-cant-' + i)?.value) || 0;
+    const total = parseFloat(item.cantidad_contratada) || 0;
+    const pct = total > 0 ? Math.round((ejecutado / total) * 100) : 0;
+    const precio = parseFloat(item.precio_unitario) || 0;
+    const importeEjec = ejecutado * precio;
+    const importeTotal = total * precio;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${item.descripcion}</td>
+      <td style="text-align:center;">${total} ${item.unidad}</td>
+      <td style="text-align:center;">${ejecutado} ${item.unidad}</td>
+      <td style="text-align:center;font-weight:bold;">${pct}%</td>
+      <td style="text-align:right;">$${precio.toLocaleString('es-AR')}</td>
+      <td style="text-align:right;">$${importeEjec.toLocaleString('es-AR')}</td>
+      <td style="text-align:right;">$${importeTotal.toLocaleString('es-AR')}</td>
+    </tr>`;
+  }).join('');
+
+  const ejecutorNombre = ejecutorSeleccionado === 'empresa'
+    ? document.getElementById('empresa-nombre')?.value || '—'
+    : ejecutorSeleccionado === 'concejo' ? 'Concejo Escolar'
+    : document.getElementById('otro-descripcion')?.value || '—';
+
+  const obsAvance = document.getElementById('avance-obs')?.value || '';
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8">
+  <title>Informe de Avance - ${mes}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:10pt;color:#000;margin:15mm 20mm;}
+    .header{border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:16px;}
+    .header h1{font-size:18pt;margin:0 0 4px;}
+    .header h2{font-size:13pt;margin:0;color:#444;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+    .field{display:flex;flex-direction:column;}
+    .label{font-size:8pt;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:2px;}
+    .val{font-size:10pt;}
+    table{width:100%;border-collapse:collapse;margin:10px 0;}
+    th{background:#1c1c1a;color:white;padding:6px 8px;font-size:8pt;text-align:left;}
+    td{border:1px solid #ccc;padding:5px 8px;font-size:9pt;}
+    tr:nth-child(even) td{background:#f5f5f5;}
+    .total-row td{font-weight:bold;background:#eee;}
+    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
+    .firma{border-top:1px solid #000;padding-top:6px;font-size:9pt;}
+    .obs{background:#f9f9f9;border:1px solid #ddd;padding:10px;border-radius:4px;font-size:9pt;margin-top:10px;}
+    .badge-pct{display:inline-block;background:#e8f5ee;color:#1a5c3a;border-radius:20px;padding:2px 10px;font-weight:bold;}
+    @media print{body{margin:10mm 15mm;}}
+  </style>
+  </head><body>
+  <div class="header">
+    <h1>SIIE · Informe de Avance Mensual</h1>
+    <h2>Mes de certificación: ${mes}</h2>
+  </div>
+  <div class="grid">
+    <div class="field"><span class="label">Establecimiento</span><span class="val">${edificio?.nombre || '—'}</span></div>
+    <div class="field"><span class="label">Delegación</span><span class="val">${edificio?.delegacion || '—'}</span></div>
+    <div class="field"><span class="label">Dirección</span><span class="val">${edificio?.direccion || '—'}</span></div>
+    <div class="field"><span class="label">Ejecutor</span><span class="val">${ejecutorNombre}</span></div>
+    <div class="field"><span class="label">Inspector que controla</span><span class="val">${inspector}</span></div>
+    <div class="field"><span class="label">Fecha de visita</span><span class="val">${fecha}</span></div>
+  </div>
+
+  <h3 style="margin-bottom:6px;">Ítems y avance de ejecución</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Descripción</th>
+        <th>Cant. contratada</th>
+        <th>Cant. ejecutada</th>
+        <th>% avance</th>
+        <th>Precio unitario</th>
+        <th>Importe ejecutado</th>
+        <th>Importe total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsHTML}
+    </tbody>
+  </table>
+
+  ${obsAvance ? `<div class="obs"><strong>Observaciones:</strong> ${obsAvance}</div>` : ''}
+
+  <div class="firmas">
+    <div class="firma">Inspector: ${inspector}<br>Firma y aclaración</div>
+    <div class="firma">Representante del ejecutor<br>Firma y aclaración</div>
+  </div>
+  <div style="margin-top:20px;font-size:8pt;color:#999;text-align:center;">
+    SIIE · Sistema Integral de Infraestructura Educativa · Informe generado el ${new Date().toLocaleDateString('es-AR')}
+  </div>
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Avance_${(edificio?.nombre || 'edificio').replace(/\s+/g,'_')}_${mes}.html`;
+  a.click();
+  showToast('Abrí el archivo y usá Ctrl+P para imprimir el PDF');
+}
+
+/* ── PDF FINAL ── */
+function generarPDFFinal() {
+  const edificio = edificioSeleccionado;
+  const inspector = document.getElementById('int-inspector')?.value || '';
+  const fechaInicio = document.getElementById('int-fecha-inicio')?.value || '';
+  const fechaFin = document.getElementById('int-fecha-fin-real')?.value || '';
+  const resultado = document.getElementById('int-resultado')?.value || '';
+  const estado = document.getElementById('int-estado-cierre')?.value || '';
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8">
+  <title>Certificación Final - ${edificio?.nombre || ''}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:10pt;color:#000;margin:15mm 20mm;}
+    .header{border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:16px;}
+    h1{font-size:18pt;margin:0 0 4px;}
+    h2{font-size:13pt;margin:0;color:#444;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+    .field{display:flex;flex-direction:column;}
+    .label{font-size:8pt;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:2px;}
+    .val{font-size:10pt;}
+    table{width:100%;border-collapse:collapse;margin:10px 0;}
+    th{background:#1c1c1a;color:white;padding:6px 8px;font-size:8pt;}
+    td{border:1px solid #ccc;padding:5px 8px;font-size:9pt;}
+    .resultado-box{background:#e8f5ee;border:1px solid #1D9E75;border-radius:6px;padding:12px;margin:12px 0;}
+    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:50px;}
+    .firma{border-top:2px solid #000;padding-top:8px;font-size:9pt;}
+    @media print{body{margin:10mm 15mm;}}
+  </style>
+  </head><body>
+  <div class="header">
+    <h1>SIIE · Certificación Final de Intervención</h1>
+    <h2>${edificio?.nombre || '—'}</h2>
+  </div>
+  <div class="grid">
+    <div class="field"><span class="label">Establecimiento</span><span class="val">${edificio?.nombre || '—'}</span></div>
+    <div class="field"><span class="label">Delegación</span><span class="val">${edificio?.delegacion || '—'}</span></div>
+    <div class="field"><span class="label">Dirección</span><span class="val">${edificio?.direccion || '—'}</span></div>
+    <div class="field"><span class="label">Fecha de inicio</span><span class="val">${fechaInicio}</span></div>
+    <div class="field"><span class="label">Fecha de finalización</span><span class="val">${fechaFin}</span></div>
+    <div class="field"><span class="label">Estado de cierre</span><span class="val">${estado}</span></div>
+    <div class="field"><span class="label">Inspector</span><span class="val">${inspector}</span></div>
+  </div>
+
+  <h3>Trabajos ejecutados</h3>
+  <table>
+    <thead><tr><th>#</th><th>Descripción</th><th>Contratado</th><th>Ejecutado</th><th>% final</th></tr></thead>
+    <tbody>
+      ${itemsContratados.map((item, i) => {
+        const ej = parseFloat(document.getElementById('avance-cant-' + i)?.value) || 0;
+        const tot = parseFloat(item.cantidad_contratada) || 0;
+        const pct = tot > 0 ? Math.round((ej/tot)*100) : 0;
+        return `<tr><td>${i+1}</td><td>${item.descripcion}</td><td>${tot} ${item.unidad}</td><td>${ej} ${item.unidad}</td><td style="font-weight:bold;">${pct}%</td></tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+
+  ${resultado ? `<div class="resultado-box"><strong>Resultado final:</strong> ${resultado}</div>` : ''}
+
+  <div class="firmas">
+    <div class="firma">Inspector que certifica: ${inspector}<br><br>Firma y aclaración</div>
+    <div class="firma">Representante del ejecutor<br><br>Firma y aclaración</div>
+  </div>
+  <div style="margin-top:20px;font-size:8pt;color:#999;text-align:center;">
+    SIIE · Sistema Integral de Infraestructura Educativa · Certificación emitida el ${new Date().toLocaleDateString('es-AR')}
+  </div>
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Certificacion_${(edificio?.nombre || 'edificio').replace(/\s+/g,'_')}_${fechaFin}.html`;
+  a.click();
+  showToast('Abrí el archivo y usá Ctrl+P para imprimir el PDF');
+}
+
+/* ── ENVIAR ── */
+async function enviarIntervencion() {
+  if (!ejecutorSeleccionado) { showToast('Seleccioná quién ejecuta en el paso 01'); return; }
+  if (!edificioSeleccionado) { showToast('Seleccioná el edificio en el paso 02'); return; }
+
+  const user = JSON.parse(localStorage.getItem('siie_user') || '{}');
+  const idInt = 'INT-' + Date.now();
+  document.getElementById('f-id-int').value = idInt;
+
+  const data = {
+    _version: 'SIIE-INT-001-v1.0',
+    _tipo: 'intervencion',
+    email: user.email || '',
+    id_intervencion: idInt,
+    ejecutor: ejecutorSeleccionado,
+    ejecutor_nombre: ejecutorSeleccionado === 'empresa'
+      ? document.getElementById('empresa-nombre')?.value || ''
+      : ejecutorSeleccionado === 'concejo' ? 'Concejo Escolar'
+      : document.getElementById('otro-descripcion')?.value || '',
+    edificio_id: edificioSeleccionado.id_edificio || '',
+    edificio_nombre: edificioSeleccionado.nombre || '',
+    problemas_ids: problemasSeleccionados.map(p => p.id_intervencion),
+    descripcion: document.getElementById('int-descripcion')?.value || '',
+    inspector: document.getElementById('int-inspector')?.value || '',
+    fecha_inicio: document.getElementById('int-fecha-inicio')?.value || '',
+    fecha_fin_estimada: document.getElementById('int-fecha-fin-est')?.value || '',
+    fecha_fin_real: document.getElementById('int-fecha-fin-real')?.value || '',
+    estado: document.getElementById('int-estado-cierre')?.value || 'en_ejecucion',
+    resultado: document.getElementById('int-resultado')?.value || '',
+    items: itemsContratados,
+  };
+
+  document.getElementById('overlay').classList.add('show');
+
+  try {
+    await enviarViaIframe(data);
+    document.getElementById('overlay').classList.remove('show');
+    showToast('Intervención registrada correctamente');
+    setTimeout(() => history.back(), 1800);
+  } catch(err) {
+    document.getElementById('overlay').classList.remove('show');
+    localStorage.setItem('siie_borrador_int_' + Date.now(), JSON.stringify(data));
+    showToast('Error al enviar · guardado localmente', 3500);
+  }
+}
+
+async function enviarViaIframe(data) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve({ ok: true }), 15000);
+    const iframeName = 'siie_int_' + Date.now();
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeName; iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = APPS_SCRIPT_URL_INT + '?action=save_intervencion&email=' + encodeURIComponent(data.email);
+    form.target = iframeName; form.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(data);
+    form.appendChild(input); document.body.appendChild(form);
+    iframe.onload = () => {
+      try {
+        const txt = iframe.contentDocument?.body?.innerText || '';
+        const result = JSON.parse(txt);
+        iframe.remove(); form.remove(); resolve(result);
+      } catch(e) { iframe.remove(); form.remove(); resolve({ ok: true }); }
+    };
+    form.submit();
+  });
+}
+
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.edificio-search')) {
+    document.getElementById('edificio-results').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
