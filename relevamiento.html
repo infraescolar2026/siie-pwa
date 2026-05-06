@@ -299,13 +299,14 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   <button class="step-btn active" id="step-btn-1" onclick="irStep(1)">01 Edificio</button>
   <button class="step-btn" id="step-btn-2" onclick="irStep(2)">02 Gestión</button>
   <button class="step-btn" id="step-btn-3" onclick="irStep(3)">03 Datos</button>
-  <button class="step-btn" id="step-btn-4" onclick="irStep(4)">04 Estado</button>
-  <button class="step-btn" id="step-btn-5" onclick="irStep(5)">05 Fachada</button>
-  <button class="step-btn" id="step-btn-6" onclick="irStep(6)">06 Sectores</button>
-  <button class="step-btn" id="step-btn-7" onclick="irStep(7)">07 Impacto</button>
-  <button class="step-btn" id="step-btn-8" onclick="irStep(8)">08 Fotos</button>
-  <button class="step-btn" id="step-btn-9" onclick="irStep(9)">09 Observ.</button>
-  <button class="step-btn" id="step-btn-10" onclick="irStep(10)">10 Firma</button>
+  <button class="step-btn" id="step-btn-4" onclick="irStep(4)">04 Entorno</button>
+  <button class="step-btn" id="step-btn-5" onclick="irStep(5)">05 Estado</button>
+  <button class="step-btn" id="step-btn-6" onclick="irStep(6)">06 Fachada</button>
+  <button class="step-btn" id="step-btn-7" onclick="irStep(7)">07 Sectores</button>
+  <button class="step-btn" id="step-btn-8" onclick="irStep(8)">08 Impacto</button>
+  <button class="step-btn" id="step-btn-9" onclick="irStep(9)">09 Imágenes</button>
+  <button class="step-btn" id="step-btn-10" onclick="irStep(10)">10 Observ.</button>
+  <button class="step-btn" id="step-btn-11" onclick="irStep(11)">11 Firma</button>
 </div>
 
 <div class="content">
@@ -557,6 +558,10 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
             <span class="field-error" id="e-ref-nombre">Obligatorio</span>
           </div>
           <div class="field">
+            <label class="field-label">Cargo</label>
+            <input type="text" id="f-ref-cargo" placeholder="ej: Directora">
+          </div>
+          <div class="field">
             <label class="field-label">Celular / WhatsApp</label>
             <input type="tel" id="f-ref-cel">
           </div>
@@ -574,7 +579,103 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 4: ESTADO GENERAL ─── -->
+
+<!-- ─── STEP 4: ENTORNO ─── -->
 <div id="step-4" style="display:none;">
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <span class="section-title">Entorno del establecimiento</span>
+      <span class="section-q">¿Cómo está el entorno?</span>
+    </div>
+    <div class="section-body">
+
+      <!-- CALLE -->
+      <div style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Estado de la calle</div>
+        <div class="fields f1" style="margin-bottom:10px;">
+          <div class="field">
+            <select id="ent-calle-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-calle-obs" placeholder="Observaciones sobre el estado de la calle…" style="min-height:56px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="fotos-calle"></div>
+      </div>
+
+      <!-- LUMINARIA -->
+      <div style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Estado de la luminaria</div>
+        <div class="fields f1" style="margin-bottom:10px;">
+          <div class="field">
+            <select id="ent-luminaria-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option><option>No aplica</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-luminaria-obs" placeholder="Observaciones sobre luminaria…" style="min-height:56px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="fotos-luminaria"></div>
+      </div>
+
+      <!-- DISTANCIA A PLAZA -->
+      <div style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Distancia a espacio público / plaza</div>
+        <div class="fields f2" style="margin-bottom:10px;">
+          <div class="field">
+            <input type="number" id="ent-plaza-dist" placeholder="Distancia en metros" min="0">
+          </div>
+          <div class="field">
+            <input type="text" id="ent-plaza-nombre" placeholder="Nombre de la plaza o espacio">
+          </div>
+        </div>
+      </div>
+
+      <!-- VEREDAS -->
+      <div style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Estado de las veredas y comunicación</div>
+        <div class="fields f1" style="margin-bottom:10px;">
+          <div class="field">
+            <select id="ent-vereda-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-vereda-obs" placeholder="Observaciones sobre veredas, rampas de acceso, conexión con transporte…" style="min-height:56px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="fotos-vereda"></div>
+      </div>
+
+      <!-- ESPACIO DE RECREACIÓN -->
+      <div style="margin-bottom:4px;">
+        <div class="field-label" style="margin-bottom:8px;">Estado del espacio de recreación / plaza</div>
+        <div class="fields f1" style="margin-bottom:10px;">
+          <div class="field">
+            <select id="ent-recreacion-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option><option>No existe</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-recreacion-obs" placeholder="Observaciones sobre el espacio de recreación…" style="min-height:56px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="fotos-recreacion"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="step-5" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">04</span>
@@ -614,7 +715,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 5: FOTO FACHADA ─── -->
-<div id="step-5" style="display:none;">
+<div id="step-6" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">05</span>
@@ -643,7 +744,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 6: SECTORES ─── -->
-<div id="step-6" style="display:none;">
+<div id="step-7" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">06</span>
@@ -688,7 +789,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 7: IMPACTO PEDAGÓGICO ─── -->
-<div id="step-7" style="display:none;">
+<div id="step-8" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">07</span>
@@ -718,7 +819,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 8: FOTOS DE PROBLEMAS ─── -->
-<div id="step-8" style="display:none;">
+<div id="step-9" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">08</span>
@@ -734,7 +835,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 9: OBSERVACIONES ─── -->
-<div id="step-9" style="display:none;">
+<div id="step-10" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">09</span>
@@ -750,7 +851,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </div>
 
 <!-- ─── STEP 10: FIRMA ─── -->
-<div id="step-10" style="display:none;">
+<div id="step-11" style="display:none;">
   <div class="section">
     <div class="section-head">
       <span class="section-num">10</span>
@@ -1053,6 +1154,40 @@ function descargarPDF() {
   a.download = 'Relevamiento_' + (nombre.replace(/\s+/g,'_')) + '_' + fecha.replace(/\//g,'-') + '.html';
   a.click();
   showToast('PDF generado · abrí el archivo y usá Ctrl+P para imprimir');
+}
+
+/* Fotos de entorno */
+const entornoFotos = {};
+const entornoCount = {};
+
+function addFotoEntorno(tipo) {
+  if (!entornoCount[tipo]) entornoCount[tipo] = 0;
+  entornoCount[tipo]++;
+  const n = entornoCount[tipo];
+  const slotId = `ent-${tipo}-slot-${n}`;
+  const prevId = `ent-${tipo}-prev-${n}`;
+  const div = document.createElement('div');
+  div.innerHTML = `<div class="foto-slot" id="${slotId}" style="aspect-ratio:4/3;">
+    <input type="file" accept="image/*" capture="environment" onchange="onFotoEntorno(this,'${tipo}',${n},'${slotId}','${prevId}')">
+    <svg class="foto-slot-icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span class="foto-slot-label" style="font-size:10px;">Foto ${n}</span>
+    <img class="foto-preview-img" id="${prevId}" style="display:none;" alt="">
+  </div>`;
+  const grid = document.getElementById('fotos-' + tipo);
+  if (grid) grid.appendChild(div);
+}
+
+function onFotoEntorno(input, tipo, n, slotId, prevId) {
+  const file = input.files[0];
+  if (!file) return;
+  comprimirFoto(file, 1200, 0.82, (base64) => {
+    if (!entornoFotos[tipo]) entornoFotos[tipo] = {};
+    entornoFotos[tipo][n] = base64;
+    const img = document.getElementById(prevId);
+    if (img) { img.src = base64; img.style.display = 'block'; }
+    const slot = document.getElementById(slotId);
+    if (slot) slot.classList.add('has-foto');
+  });
 }
 
 let fotosOtrasCount = 0;
@@ -1411,6 +1546,14 @@ function recopilarDatos() {
     fotos_problemas: Object.keys(fotosData)
       .filter(k => k !== 'fachada-slot')
       .map(k => ({ slot: k, base64: fotosData[k] })),
+    entorno: {
+      calle: { estado: document.getElementById('ent-calle-estado')?.value || '', obs: document.getElementById('ent-calle-obs')?.value || '' },
+      luminaria: { estado: document.getElementById('ent-luminaria-estado')?.value || '', obs: document.getElementById('ent-luminaria-obs')?.value || '' },
+      plaza_dist: document.getElementById('ent-plaza-dist')?.value || '',
+      plaza_nombre: document.getElementById('ent-plaza-nombre')?.value || '',
+      vereda: { estado: document.getElementById('ent-vereda-estado')?.value || '', obs: document.getElementById('ent-vereda-obs')?.value || '' },
+      recreacion: { estado: document.getElementById('ent-recreacion-estado')?.value || '', obs: document.getElementById('ent-recreacion-obs')?.value || '' },
+    },
     observaciones_generales: document.getElementById('f-obs')?.value || '',
   };
 }
