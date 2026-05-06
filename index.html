@@ -609,7 +609,10 @@ body {
       </div>
     </div>
 
-    <div class="section-title mt-12">Borradores guardados</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:6px;">
+      <div class="section-title" style="margin:0;">Borradores guardados</div>
+      <button onclick="borrarTodosBorradores()" style="background:none;border:1px solid var(--gray-200);border-radius:6px;padding:4px 10px;font-family:var(--font);font-size:12px;color:var(--gray-400);cursor:pointer;">Borrar todos</button>
+    </div>
     <div id="borradores-list">
       <div class="card">
         <div class="card-sub" style="text-align:center; padding: 8px 0;">No hay borradores guardados</div>
