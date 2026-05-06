@@ -609,6 +609,25 @@ body {
       </div>
     </div>
 
+    <div class="section-title mt-12">Formularios para imprimir</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+      <button onclick="imprimirRelevamiento()" style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:14px 8px;cursor:pointer;font-family:var(--font);text-align:center;transition:all 0.15s;" onmousedown="this.style.background='var(--accent-l)'">
+        <div style="font-size:20px;margin-bottom:4px;">📋</div>
+        <div style="font-size:12px;font-weight:600;color:var(--black);">Relevamiento</div>
+        <div style="font-size:10px;color:var(--gray-400);">11 pasos · A4</div>
+      </button>
+      <button onclick="imprimirInspeccion()" style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:14px 8px;cursor:pointer;font-family:var(--font);text-align:center;transition:all 0.15s;">
+        <div style="font-size:20px;margin-bottom:4px;">🔍</div>
+        <div style="font-size:12px;font-weight:600;color:var(--black);">Inspección</div>
+        <div style="font-size:10px;color:var(--gray-400);">9 pasos · A4</div>
+      </button>
+      <button onclick="imprimirIntervencion()" style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:14px 8px;cursor:pointer;font-family:var(--font);text-align:center;transition:all 0.15s;">
+        <div style="font-size:20px;margin-bottom:4px;">🔧</div>
+        <div style="font-size:12px;font-weight:600;color:var(--black);">Intervención</div>
+        <div style="font-size:10px;color:var(--gray-400);">7 pasos · A4</div>
+      </button>
+    </div>
+
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:6px;">
       <div class="section-title" style="margin:0;">Borradores guardados</div>
       <button onclick="borrarTodosBorradores()" style="background:none;border:1px solid var(--gray-200);border-radius:6px;padding:4px 10px;font-family:var(--font);font-size:12px;color:var(--gray-400);cursor:pointer;">Borrar todos</button>
@@ -731,5 +750,713 @@ body {
 <div id="offline-toast">Sin conexión · los datos se sincronizarán al reconectar</div>
 
 <script src="app.js"></script>
+<script>
+// Generador de formularios imprimibles SIIE
+// Se inyecta en index.html como script inline
+
+function getUsuarioActual() {
+  const user = JSON.parse(localStorage.getItem('siie_user') || '{}');
+  return {
+    nombre: user.name || user.email || '—',
+    email: user.email || '—',
+    rol: user.role || '—'
+  };
+}
+
+function estilosFormulario() {
+  return `
+    <style>
+      @page { size: A4; margin: 15mm 20mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; background: white; }
+      
+      .header { display: flex; align-items: center; border-bottom: 3px solid #0f0f0e; padding-bottom: 10px; margin-bottom: 14px; gap: 16px; }
+      .header-logo { font-size: 8pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #0f0f0e; max-width: 200px; line-height: 1.3; }
+      .header-title { flex: 1; }
+      .header-title h1 { font-size: 14pt; font-weight: bold; margin-bottom: 2px; }
+      .header-title h2 { font-size: 10pt; font-weight: normal; color: #555; }
+      .header-inspector { text-align: right; font-size: 9pt; color: #333; }
+      .header-inspector strong { display: block; font-size: 10pt; }
+
+      .seccion { margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; overflow: hidden; page-break-inside: avoid; }
+      .seccion-titulo { background: #0f0f0e; color: white; padding: 5px 10px; font-size: 9pt; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+      .seccion-num { opacity: 0.5; font-size: 8pt; }
+      .seccion-body { padding: 10px; }
+
+      .grid { display: grid; gap: 8px 12px; }
+      .g2 { grid-template-columns: 1fr 1fr; }
+      .g3 { grid-template-columns: 1fr 1fr 1fr; }
+      .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+      .span2 { grid-column: span 2; }
+      .span3 { grid-column: span 3; }
+      .span4 { grid-column: span 4; }
+
+      .campo { display: flex; flex-direction: column; gap: 2px; }
+      .campo label { font-size: 7.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.06em; color: #555; }
+      .campo .linea { border-bottom: 1px solid #999; min-height: 18px; margin-top: 2px; }
+      .campo .linea-alta { border-bottom: 1px solid #999; min-height: 36px; margin-top: 2px; }
+      .campo .linea-muy-alta { border-bottom: 1px solid #999; min-height: 54px; margin-top: 2px; }
+      .campo .box { border: 1px solid #999; min-height: 18px; width: 18px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+      .opciones { display: flex; gap: 16px; align-items: center; margin-top: 4px; }
+      .opcion { display: flex; align-items: center; gap: 4px; font-size: 9pt; }
+      .opcion .box { flex-shrink: 0; }
+
+      .estado-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
+      .estado-opt { border: 1px solid #999; border-radius: 4px; padding: 6px 4px; text-align: center; }
+      .estado-opt .nombre { font-size: 9pt; font-weight: bold; }
+      .estado-opt .rango { font-size: 7pt; color: #666; }
+
+      .tabla { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 8.5pt; }
+      .tabla th { background: #eee; border: 1px solid #ccc; padding: 4px 5px; font-size: 7.5pt; text-transform: uppercase; text-align: left; white-space: nowrap; }
+      .tabla td { border: 1px solid #ccc; padding: 2px; min-height: 22px; }
+      .tabla .col-n { width: 20px; text-align: center; background: #f5f5f5; }
+
+      .firma-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+      .firma-block { display: flex; flex-direction: column; gap: 4px; }
+      .firma-linea { border-bottom: 2px solid #000; padding-bottom: 30px; }
+      .firma-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.06em; color: #555; }
+
+      .pie { margin-top: 16px; font-size: 7.5pt; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 8px; }
+
+      .entorno-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #ddd; }
+      .entorno-item:last-child { border-bottom: none; }
+      .entorno-titulo { font-size: 9pt; font-weight: bold; margin-bottom: 6px; }
+      .fotos-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+      .foto-box { border: 1px dashed #999; height: 70px; display: flex; align-items: flex-end; padding: 3px; border-radius: 3px; }
+      .foto-label { font-size: 7pt; color: #aaa; }
+
+      @media print {
+        .no-print { display: none !important; }
+        body { margin: 0; }
+      }
+    </style>`;
+}
+
+function headerHTML(titulo, subtitulo, usuario, fecha) {
+  return `
+    <div class="header">
+      <div class="header-logo">
+        Dirección General de<br>Infraestructura Escolar
+      </div>
+      <div class="header-title">
+        <h1>${titulo}</h1>
+        <h2>${subtitulo}</h2>
+      </div>
+      <div class="header-inspector">
+        <strong>${usuario.nombre}</strong>
+        ${usuario.email}<br>
+        ${fecha}
+      </div>
+    </div>`;
+}
+
+function pieHTML() {
+  return `<div class="pie">SIIE · Sistema Integral de Infraestructura Escolar · Formulario para uso en campo</div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   FORMULARIO 1: RELEVAMIENTO GENERAL
+══════════════════════════════════════════════════════ */
+function imprimirRelevamiento() {
+  const u = getUsuarioActual();
+  const fecha = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8"><title>Relevamiento General - SIIE</title>
+  ${estilosFormulario()}
+  </head><body>
+  
+  ${headerHTML('Formulario de Relevamiento General', 'Diagnóstico inicial del establecimiento', u, fecha)}
+
+  <!-- 01 IDENTIFICACIÓN -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">01</span> Identificación del establecimiento</div>
+    <div class="seccion-body">
+      <div class="grid g3" style="margin-bottom:8px;">
+        <div class="campo"><label>Tipo / Nivel</label><div class="linea"></div></div>
+        <div class="campo"><label>N° Establecimiento</label><div class="linea"></div></div>
+        <div class="campo"><label>Nombre del establecimiento</label><div class="linea"></div></div>
+      </div>
+      <div class="grid g3">
+        <div class="campo"><label>Delegación</label><div class="linea"></div></div>
+        <div class="campo"><label>Localidad</label><div class="linea"></div></div>
+        <div class="campo"><label>Dirección</label><div class="linea"></div></div>
+        <div class="campo"><label>Teléfono</label><div class="linea"></div></div>
+        <div class="campo span2"><label>Email institucional</label><div class="linea"></div></div>
+      </div>
+      <div class="grid g3" style="margin-top:8px;">
+        <div class="campo span2"><label>Link Google Maps (para geolocalización)</label><div class="linea"></div></div>
+        <div class="campo"><label>Latitud / Longitud</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 GESTIÓN -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">02</span> Estructura de gestión</div>
+    <div class="seccion-body">
+      <div class="grid g4">
+        <div class="campo span2"><label>Inspector responsable</label><div class="linea"></div></div>
+        <div class="campo"><label>Etapa</label><div class="linea"></div></div>
+        <div class="campo"><label>Zona</label><div class="linea"></div></div>
+        <div class="campo"><label>Fecha del relevamiento</label><div class="linea"></div></div>
+        <div class="campo"><label>Hora de inicio</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 DATOS INSTITUCIONALES -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">03</span> Datos institucionales</div>
+    <div class="seccion-body">
+      <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#555;margin-bottom:6px;">Matrícula</div>
+      <div class="grid g4" style="margin-bottom:10px;">
+        <div class="campo"><label>Varones</label><div class="linea"></div></div>
+        <div class="campo"><label>Mujeres</label><div class="linea"></div></div>
+        <div class="campo"><label>Otros</label><div class="linea"></div></div>
+        <div class="campo"><label>Con discapacidad</label><div class="linea"></div></div>
+        <div class="campo"><label>Total</label><div class="linea"></div></div>
+        <div class="campo"><label>Secciones</label><div class="linea"></div></div>
+        <div class="campo"><label>Turnos</label><div class="linea"></div></div>
+      </div>
+      <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#555;margin-bottom:6px;">Personal</div>
+      <div class="grid g4" style="margin-bottom:10px;">
+        <div class="campo"><label>Docente</label><div class="linea"></div></div>
+        <div class="campo"><label>Administrativo</label><div class="linea"></div></div>
+        <div class="campo"><label>Auxiliares</label><div class="linea"></div></div>
+        <div class="campo"><label>Cocineros</label><div class="linea"></div></div>
+      </div>
+      <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#555;margin-bottom:6px;">Servicio alimentario</div>
+      <div class="grid g3" style="margin-bottom:10px;">
+        <div class="campo"><label>Desayuno</label>
+          <div class="opciones"><div class="opcion"><div class="box"></div> Sí</div><div class="opcion"><div class="box"></div> No</div></div>
+        </div>
+        <div class="campo"><label>Almuerzo</label>
+          <div class="opciones"><div class="opcion"><div class="box"></div> Sí</div><div class="opcion"><div class="box"></div> No</div></div>
+        </div>
+        <div class="campo"><label>Merienda</label>
+          <div class="opciones"><div class="opcion"><div class="box"></div> Sí</div><div class="opcion"><div class="box"></div> No</div></div>
+        </div>
+      </div>
+      <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#555;margin-bottom:6px;">Referente institucional</div>
+      <div class="grid g3">
+        <div class="campo span2"><label>Apellido y nombre</label><div class="linea"></div></div>
+        <div class="campo"><label>Cargo</label><div class="linea"></div></div>
+        <div class="campo"><label>Celular / WhatsApp</label><div class="linea"></div></div>
+        <div class="campo"><label>Canal preferido</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 ENTORNO -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">04</span> Entorno del establecimiento</div>
+    <div class="seccion-body">
+      ${['Estado de la calle','Estado de la luminaria','Estado de las veredas y comunicación','Estado del espacio de recreación / plaza'].map(item => `
+        <div class="entorno-item">
+          <div class="entorno-titulo">${item}</div>
+          <div class="grid g3">
+            <div class="campo"><label>Estado</label>
+              <div class="opciones" style="flex-wrap:wrap;gap:8px;">
+                ${['Muy bueno','Bueno','Regular','Malo','Muy malo'].map(e => `<div class="opcion"><div class="box"></div> ${e}</div>`).join('')}
+              </div>
+            </div>
+            <div class="campo span2"><label>Observaciones</label><div class="linea-alta"></div></div>
+          </div>
+          <div class="fotos-row">
+            ${[1,2,3].map(n => `<div class="foto-box"><div class="foto-label">Foto ${n}</div></div>`).join('')}
+          </div>
+        </div>`).join('')}
+      <div class="grid g2" style="margin-top:6px;">
+        <div class="campo"><label>Distancia a espacio público / plaza (metros)</label><div class="linea"></div></div>
+        <div class="campo"><label>Nombre del espacio / plaza</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 ESTADO GENERAL -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">05</span> Estado general del edificio</div>
+    <div class="seccion-body">
+      <div class="estado-grid">
+        ${[['Crítico','0–25%'],['Malo','26–50%'],['Regular','51–70%'],['Bueno','71–90%'],['Óptimo','91–100%']].map(([e,r]) => `
+          <div class="estado-opt"><div class="nombre">${e}</div><div class="rango">${r}</div></div>`).join('')}
+      </div>
+      <div class="campo" style="margin-top:8px;"><label>Observación general</label><div class="linea"></div></div>
+    </div>
+  </div>
+
+  <!-- 06 FACHADA -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">06</span> Fotografía de fachada</div>
+    <div class="seccion-body">
+      <div class="fotos-row" style="grid-template-columns:1fr 2fr;gap:12px;">
+        <div class="foto-box" style="height:100px;"><div class="foto-label">Foto fachada (obligatoria)</div></div>
+        <div class="campo"><label>Observaciones sobre la fachada</label><div class="linea-muy-alta"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 SECTORES -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">07</span> Diagnóstico por sectores</div>
+    <div class="seccion-body">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th class="col-n">#</th>
+            <th>Sector</th>
+            <th>Identificador</th>
+            <th>Planta</th>
+            <th>En uso</th>
+            <th>Componente</th>
+            <th style="min-width:120px;">Problema detectado</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Afectada</th>
+            <th>% afect.</th>
+            <th>IMP</th>
+            <th>INT</th>
+            <th style="width:80px;">Fotos</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array(10).fill(0).map((_, i) => `
+          <tr>
+            <td class="col-n">${i+1}</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td style="text-align:center;"></td>
+            <td style="text-align:center;"></td>
+            <td></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="font-size:7.5pt;color:#888;margin-top:4px;">IMP = ¿Impide el desarrollo pedagógico? &nbsp;·&nbsp; INT = ¿Requiere intervención?</div>
+    </div>
+  </div>
+
+  <!-- 08 IMPACTO PEDAGÓGICO -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">08</span> Impacto pedagógico</div>
+    <div class="seccion-body">
+      <div style="font-size:9pt;font-weight:bold;margin-bottom:8px;">¿Algún problema impide el desarrollo pedagógico?</div>
+      <div class="opciones" style="margin-bottom:8px;">
+        <div class="opcion"><div class="box"></div> Sí</div>
+        <div class="opcion"><div class="box"></div> No</div>
+      </div>
+      <div class="campo"><label>Justificación (obligatoria si marcó Sí)</label><div class="linea-alta"></div></div>
+    </div>
+  </div>
+
+  <!-- 09 OTRAS IMÁGENES -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">09</span> Otras imágenes de referencia</div>
+    <div class="seccion-body">
+      <div class="fotos-row">
+        ${Array(6).fill(0).map((_,i) => `<div class="foto-box"><div class="foto-label">Foto ${i+1}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 OBSERVACIONES -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">10</span> Observaciones generales</div>
+    <div class="seccion-body">
+      <div class="campo"><div class="linea-muy-alta"></div></div>
+    </div>
+  </div>
+
+  <!-- 11 FIRMA -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">11</span> Validación y firma</div>
+    <div class="seccion-body">
+      <div class="firma-grid">
+        <div class="firma-block">
+          <div class="firma-linea"></div>
+          <div class="firma-label">Inspector / Relevador: ${u.nombre}</div>
+        </div>
+        <div class="firma-block">
+          <div class="firma-linea"></div>
+          <div class="firma-label">Referente institucional</div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:12px;">
+        <div class="campo"><label>ID del edificio en el sistema</label><div class="linea"></div></div>
+        <div class="campo"><label>Hora de cierre</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  ${pieHTML()}
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SIIE_Relevamiento_${fecha.replace(/\//g,'-')}_${u.nombre.replace(/\s+/g,'_')}.html`;
+  a.click();
+  mostrarToastImprimir();
+}
+
+/* ══════════════════════════════════════════════════════
+   FORMULARIO 2: INSPECCIÓN PERIÓDICA
+══════════════════════════════════════════════════════ */
+function imprimirInspeccion() {
+  const u = getUsuarioActual();
+  const fecha = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8"><title>Inspección Periódica - SIIE</title>
+  ${estilosFormulario()}
+  </head><body>
+
+  ${headerHTML('Formulario de Inspección Periódica', 'Seguimiento y actualización de estado', u, fecha)}
+
+  <!-- 01 EDIFICIO -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">01</span> Establecimiento inspeccionado</div>
+    <div class="seccion-body">
+      <div class="grid g3">
+        <div class="campo span2"><label>Nombre del establecimiento</label><div class="linea"></div></div>
+        <div class="campo"><label>N° Establecimiento</label><div class="linea"></div></div>
+        <div class="campo"><label>Delegación</label><div class="linea"></div></div>
+        <div class="campo"><label>Dirección</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 INSPECCIÓN -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">02</span> Datos de la inspección</div>
+    <div class="seccion-body">
+      <div class="grid g3">
+        <div class="campo span2"><label>Inspector</label><div class="linea"></div></div>
+        <div class="campo"><label>Fecha</label><div class="linea"></div></div>
+        <div class="campo"><label>Hora</label><div class="linea"></div></div>
+        <div class="campo span2"><label>Motivo de la inspección</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 EVOLUCIÓN -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">03</span> Evolución de problemas anteriores</div>
+    <div class="seccion-body">
+      ${Array(5).fill(0).map((_, i) => `
+        <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed #ddd;">
+          <div class="grid g3" style="margin-bottom:6px;">
+            <div class="campo"><label>Sector / Componente</label><div class="linea"></div></div>
+            <div class="campo"><label>Estado anterior</label><div class="linea"></div></div>
+            <div class="campo"><label>Evolución</label>
+              <div class="opciones">
+                <div class="opcion"><div class="box"></div> Mejoró</div>
+                <div class="opcion"><div class="box"></div> Sin cambios</div>
+                <div class="opcion"><div class="box"></div> Empeoró</div>
+              </div>
+            </div>
+          </div>
+          <div class="campo"><label>Observación del estado actual</label><div class="linea"></div></div>
+          <div class="fotos-row" style="margin-top:4px;">
+            <div class="foto-box"><div class="foto-label">Foto actualizada</div></div>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- 04 ENTORNO -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">04</span> Entorno del establecimiento</div>
+    <div class="seccion-body">
+      ${['Estado de la calle','Estado de la luminaria','Estado de las veredas','Estado del espacio de recreación / plaza'].map(item => `
+        <div class="entorno-item">
+          <div class="entorno-titulo">${item}</div>
+          <div class="grid g3">
+            <div class="campo"><label>Estado</label>
+              <div class="opciones" style="flex-wrap:wrap;gap:6px;">
+                ${['Muy bueno','Bueno','Regular','Malo','Muy malo'].map(e => `<div class="opcion"><div class="box"></div> ${e}</div>`).join('')}
+              </div>
+            </div>
+            <div class="campo span2"><label>Observaciones</label><div class="linea-alta"></div></div>
+          </div>
+          <div class="fotos-row">
+            ${[1,2,3].map(n => `<div class="foto-box"><div class="foto-label">Foto ${n}</div></div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- 05 NUEVOS PROBLEMAS -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">05</span> Nuevos problemas detectados</div>
+    <div class="seccion-body">
+      <div class="grid g2">
+        <div class="campo"><label>Sector</label><div class="linea"></div></div>
+        <div class="campo"><label>Componente</label><div class="linea"></div></div>
+        <div class="campo span2"><label>Descripción del problema</label><div class="linea-alta"></div></div>
+        <div class="campo"><label>¿Requiere intervención?</label>
+          <div class="opciones"><div class="opcion"><div class="box"></div> Sí</div><div class="opcion"><div class="box"></div> No</div></div>
+        </div>
+        <div class="campo"><label>Prioridad</label>
+          <div class="opciones">
+            <div class="opcion"><div class="box"></div> Alta</div>
+            <div class="opcion"><div class="box"></div> Media</div>
+            <div class="opcion"><div class="box"></div> Baja</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 IMPACTO -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">06</span> Impacto pedagógico</div>
+    <div class="seccion-body">
+      <div style="font-size:9pt;font-weight:bold;margin-bottom:8px;">¿Algún problema impide el desarrollo pedagógico?</div>
+      <div class="opciones" style="margin-bottom:8px;">
+        <div class="opcion"><div class="box"></div> Sí</div>
+        <div class="opcion"><div class="box"></div> No</div>
+      </div>
+      <div class="campo"><label>Justificación</label><div class="linea-alta"></div></div>
+    </div>
+  </div>
+
+  <!-- 07 FOTOS -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">07</span> Fotos de la inspección</div>
+    <div class="seccion-body">
+      <div class="fotos-row">
+        ${Array(6).fill(0).map((_,i) => `<div class="foto-box"><div class="foto-label">Foto ${i+1}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- 08 OBSERVACIONES -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">08</span> Observaciones</div>
+    <div class="seccion-body">
+      <div class="campo"><div class="linea-muy-alta"></div></div>
+    </div>
+  </div>
+
+  <!-- 09 FIRMA -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">09</span> Firma</div>
+    <div class="seccion-body">
+      <div class="firma-grid">
+        <div class="firma-block">
+          <div class="firma-linea"></div>
+          <div class="firma-label">Inspector: ${u.nombre}</div>
+        </div>
+        <div class="firma-block">
+          <div class="firma-linea"></div>
+          <div class="firma-label">Referente institucional</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  ${pieHTML()}
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SIIE_Inspeccion_${fecha.replace(/\//g,'-')}_${u.nombre.replace(/\s+/g,'_')}.html`;
+  a.click();
+  mostrarToastImprimir();
+}
+
+/* ══════════════════════════════════════════════════════
+   FORMULARIO 3: INTERVENCIÓN
+══════════════════════════════════════════════════════ */
+function imprimirIntervencion() {
+  const u = getUsuarioActual();
+  const fecha = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8"><title>Intervención - SIIE</title>
+  ${estilosFormulario()}
+  </head><body>
+
+  ${headerHTML('Formulario de Intervención', 'Registro de ejecución y certificación', u, fecha)}
+
+  <!-- 01 EJECUTOR -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">01</span> Ejecutor de la intervención</div>
+    <div class="seccion-body">
+      <div style="margin-bottom:10px;">
+        <div style="font-size:9pt;font-weight:bold;margin-bottom:6px;">Tipo de ejecutor</div>
+        <div class="opciones">
+          <div class="opcion"><div class="box"></div> 🏗️ Empresa</div>
+          <div class="opcion"><div class="box"></div> 🏛️ Concejo Escolar</div>
+          <div class="opcion"><div class="box"></div> 🔧 Otro</div>
+        </div>
+      </div>
+      <div class="grid g2">
+        <div class="campo span2"><label>Nombre / Razón social</label><div class="linea"></div></div>
+        <div class="campo"><label>CUIT / Responsable</label><div class="linea"></div></div>
+        <div class="campo"><label>N° Expediente / Contrato</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 EDIFICIO -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">02</span> Establecimiento</div>
+    <div class="seccion-body">
+      <div class="grid g3">
+        <div class="campo span2"><label>Nombre del establecimiento</label><div class="linea"></div></div>
+        <div class="campo"><label>N° Establecimiento</label><div class="linea"></div></div>
+        <div class="campo"><label>Delegación</label><div class="linea"></div></div>
+        <div class="campo span2"><label>Dirección</label><div class="linea"></div></div>
+        <div class="campo span2"><label>Inspector que controla</label><div class="linea"></div></div>
+        <div class="campo"><label>Fecha de inicio</label><div class="linea"></div></div>
+        <div class="campo"><label>Fecha estimada de fin</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 DESCRIPCIÓN -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">03</span> Descripción de la intervención</div>
+    <div class="seccion-body">
+      <div class="campo"><div class="linea-alta"></div></div>
+    </div>
+  </div>
+
+  <!-- 04 ÍTEMS -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">04</span> Ítems contratados</div>
+    <div class="seccion-body">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th class="col-n">#</th>
+            <th>Descripción del ítem</th>
+            <th>Cantidad contratada</th>
+            <th>Unidad</th>
+            <th>Precio unitario</th>
+            <th>Importe total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array(8).fill(0).map((_, i) => `
+          <tr>
+            <td class="col-n">${i+1}</td>
+            <td></td><td></td><td></td><td></td><td></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 05 AVANCE MENSUAL -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">05</span> Avance mensual (para certificación)</div>
+    <div class="seccion-body">
+      <div class="grid g2" style="margin-bottom:8px;">
+        <div class="campo"><label>Mes de certificación</label><div class="linea"></div></div>
+        <div class="campo"><label>Fecha de visita de control</label><div class="linea"></div></div>
+      </div>
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th class="col-n">#</th>
+            <th>Ítem</th>
+            <th>Cant. contratada</th>
+            <th>Cant. ejecutada</th>
+            <th>% avance</th>
+            <th>Importe ejecutado</th>
+            <th>Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array(8).fill(0).map((_, i) => `
+          <tr>
+            <td class="col-n">${i+1}</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top:8px;">
+        <div class="campo"><label>Observaciones del avance</label><div class="linea-alta"></div></div>
+      </div>
+      <div style="margin-top:8px;">
+        <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#555;margin-bottom:6px;">Fotos del avance</div>
+        <div class="fotos-row">
+          ${Array(6).fill(0).map((_,i) => `<div class="foto-box"><div class="foto-label">Foto avance ${i+1}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 CIERRE -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">06</span> Cierre de la intervención</div>
+    <div class="seccion-body">
+      <div class="grid g2" style="margin-bottom:8px;">
+        <div class="campo"><label>Fecha de finalización real</label><div class="linea"></div></div>
+        <div class="campo"><label>Estado de cierre</label>
+          <div class="opciones">
+            <div class="opcion"><div class="box"></div> Finalizada</div>
+            <div class="opcion"><div class="box"></div> Parcial</div>
+            <div class="opcion"><div class="box"></div> Rescindida</div>
+          </div>
+        </div>
+      </div>
+      <div class="campo"><label>Resultado final</label><div class="linea-alta"></div></div>
+      <div style="margin-top:8px;">
+        <div style="font-size:8pt;font-weight:bold;text-transform:uppercase;color:#555;margin-bottom:6px;">Fotos ANTES / DESPUÉS</div>
+        <div class="fotos-row">
+          ${Array(6).fill(0).map((_,i) => `<div class="foto-box"><div class="foto-label">${i < 3 ? 'ANTES ' + (i+1) : 'DESPUÉS ' + (i-2)}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 FIRMA -->
+  <div class="seccion">
+    <div class="seccion-titulo"><span class="seccion-num">07</span> Certificación y firma</div>
+    <div class="seccion-body">
+      <div class="firma-grid">
+        <div class="firma-block">
+          <div class="firma-linea"></div>
+          <div class="firma-label">Inspector que controla: ${u.nombre}</div>
+        </div>
+        <div class="firma-block">
+          <div class="firma-linea"></div>
+          <div class="firma-label">Representante del ejecutor</div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:12px;">
+        <div class="campo"><label>ID de la intervención en el sistema</label><div class="linea"></div></div>
+        <div class="campo"><label>Fecha de certificación</label><div class="linea"></div></div>
+      </div>
+    </div>
+  </div>
+
+  ${pieHTML()}
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SIIE_Intervencion_${fecha.replace(/\//g,'-')}_${u.nombre.replace(/\s+/g,'_')}.html`;
+  a.click();
+  mostrarToastImprimir();
+}
+
+function mostrarToastImprimir() {
+  // Reusar el toast existente del index.html
+  const t = document.getElementById('offline-toast') || document.createElement('div');
+  const msg = document.createElement('div');
+  msg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1c1c1a;color:white;border-radius:8px;padding:10px 18px;font-size:13px;z-index:9999;';
+  msg.textContent = 'Formulario descargado · abrilo y usá Ctrl+P para imprimir';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 3500);
+}
+
+</script>
 </body>
 </html>
