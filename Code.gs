@@ -1,746 +1,735 @@
-/* ═══════════════════════════════════════════════════════
-   SIIE · Backend · Google Apps Script
-   Archivo: Code.gs
-   
-   SETUP:
-   1. Crear un Google Sheet con las hojas del modelo de datos
-   2. Pegar este código en Apps Script (Extensions > Apps Script)
-   3. Reemplazar SPREADSHEET_ID con el ID de tu Sheet
-   4. Deploy > New deployment > Web App
-      - Execute as: Me
-      - Who has access: Anyone (la PWA verifica roles por email)
-   5. Copiar la URL del deployment a CONFIG.APPS_SCRIPT_URL en app.js
-   ═══════════════════════════════════════════════════════ */
-
-/* ── CONFIGURACIÓN ── */
-const SS_ID = '1gffcom4JuWABhFQ9KQscdlYWDDUYtFpPHW7VWVuBoTA'; // ID del Google Sheet
-const SS = SpreadsheetApp.openById(SS_ID);
-
-/* ── HOJAS DEL MODELO DE DATOS ── */
-const HOJAS = {
-  EDIFICIOS:    'edificios',
-  ROLES:        'roles',
-  ETAPAS:       'etapas',
-  ZONAS:        'zonas',
-  INSPECTORES:  'inspectores',
-  SECTORES:     'sectores',
-  RELEVAMIENTOS:'relevamientos',
-  OBSERVACIONES:'observaciones_sector',
-  FOTOS:        'fotos',
-  INTERVENCIONES:'intervenciones',
-  HISTORIAL:    'historial_estados',
-  INCIDENCIAS:  'incidencias',
-  CONTACTOS:    'contactos_institucionales',
-  DATOS_INST:   'datos_institucionales',
-};
-
-/* ── RESPUESTA JSON o JSONP ── */
-function jsonResponse(data, callback) {
-  if (callback) {
-    return ContentService
-      .createTextOutput(callback + '(' + JSON.stringify(data) + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIIE">
+<meta name="description" content="Sistema Integral de Infraestructura Educativa">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>SIIE v1.1</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── RESET Y VARIABLES ── */
+:root {
+  --black:    #0f0f0e;
+  --gray-900: #1c1c1a;
+  --gray-700: #3a3a37;
+  --gray-500: #6b6b66;
+  --gray-400: #999993;
+  --gray-300: #c8c8c2;
+  --gray-200: #e2e2dc;
+  --gray-100: #eeede8;
+  --gray-50:  #f7f6f2;
+  --accent:   #0f4c81;
+  --accent-h: #0a3560;
+  --accent-l: #e6eff8;
+  --ok:       #1a5c3a;
+  --ok-l:     #e8f5ee;
+  --ok-b:     #1D9E75;
+  --warn:     #7a4800;
+  --warn-l:   #fff3e0;
+  --warn-b:   #BA7517;
+  --danger:   #8b1a1a;
+  --danger-l: #fef2f2;
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --r: 10px;
+  --nav-h: 56px;
+  --bar-h: 48px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--black);
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
 }
 
-/* ── ENTRY POINTS ── */
-function doGet(e) {
-  var action   = e.parameter.action;
-  var email    = e.parameter.email || '';
-  var callback = e.parameter.callback || '';
-  var result;
-
-  try {
-    switch (action) {
-      case 'auth':     result = authUser(e.parameter.password ? decodeURIComponent(e.parameter.password) : '', email); break;
-      case 'sync_relevamiento': result = saveRelevamientoGET(e.parameter, email); break;
-      case 'stats':     result = getStats(email); break;
-      case 'edificios': result = getEdificios(email); break;
-      case 'edificio':  result = getEdificio(e.parameter.id, email); break;
-      case 'etapas':    result = getEtapas(email); break;
-      case 'ping':      result = { ok: true, ts: new Date().toISOString() }; break;
-      case 'dashboard': result = getDashboard(email); break;
-      case 'relevamientos_edificio': result = getRelevamientosEdificio(e.parameter.id, email); break;
-      case 'historial_edificio': result = getHistorialEdificio(e.parameter.id, email); break;
-      default:          result = { ok: false, error: 'Acción no reconocida: ' + action };
-    }
-  } catch (err) {
-    result = { ok: false, error: err.message };
-  }
-
-  return jsonResponse(result, callback);
+/* ── PANTALLA DE LOGIN ── */
+#login-screen {
+  position: fixed; inset: 0;
+  background: var(--black);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0; z-index: 1000;
+  padding: 32px 24px;
+}
+.login-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+.login-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.login-sub {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 48px;
+  line-height: 1.5;
+}
+.login-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: white;
+  border: none;
+  border-radius: var(--r);
+  padding: 14px 24px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--black);
+  cursor: pointer;
+  width: 100%;
+  max-width: 320px;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+}
+.login-btn:hover  { background: var(--gray-100); }
+.login-btn:active { transform: scale(0.98); }
+.login-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.login-version {
+  position: absolute; bottom: 24px;
+  font-family: var(--mono); font-size: 11px; color: #444;
+  letter-spacing: 0.08em;
 }
 
-function doPost(e) {
-  let body = {};
-  try { body = JSON.parse(e.postData.contents); } catch {}
-  const action = e.parameter.action || body.action;
-  const email  = e.parameter.email  || body.email || '';
-  let result;
+/* ── TOP BAR ── */
+#topbar {
+  height: var(--bar-h);
+  background: var(--black);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.topbar-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: white;
+}
+.topbar-sep { width: 1px; height: 18px; background: #333; }
+.topbar-page {
+  font-size: 13px;
+  color: #888;
+  flex: 1;
+}
+.topbar-user {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer;
+}
+.user-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: white;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.role-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.role-admin    { background: #fdf0e8; color: #7a3800; }
+.role-inspector{ background: var(--accent-l); color: var(--accent); }
+.role-viewer   { background: var(--gray-100); color: var(--gray-500); }
 
-  try {
-    switch (action) {
-      case 'auth':               result = authUser(body.token, email); break;
-      case 'sync_relevamiento':  result = saveRelevamiento(body, email); break;
-      case 'save_inspeccion':    result = saveInspeccion(body, email); break;
-      case 'save_intervencion':  result = saveIntervencion(body, email); break;
-      case 'create_edificio':    result = createEdificio(body, email); break;
-      case 'update_estado':      result = updateEstado(body, email); break;
-      default: result = { ok: false, error: 'Acción no reconocida: ' + action };
-    }
-  } catch (err) {
-    result = { ok: false, error: err.message };
-  }
-
-  return jsonResponse(result);
+/* ── CONTENIDO PRINCIPAL ── */
+#app-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 
-/* ══════════════════════════════════════════════════════
-   AUTH: verificar email + contraseña desde la hoja roles
-   Columnas de la hoja roles: email | rol | activo | nombre | password
-══════════════════════════════════════════════════════ */
-function authUser(token, email) {
-  var password = token; // reutilizamos el campo token para la contraseña
-  if (!email || !password) return { ok: false, error: 'Email y contraseña requeridos' };
+/* ── PÁGINAS ── */
+.page { display: none; padding: 16px; min-height: 100%; }
+.page.active { display: block; }
 
-  try {
-    var hoja = SS.getSheetByName(HOJAS.ROLES);
-    if (!hoja) return { ok: false, error: 'Sistema no configurado. Contactá al administrador.' };
+/* ── NAV INFERIOR ── */
+#bottom-nav {
+  height: calc(var(--nav-h) + var(--safe-bottom));
+  background: white;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  flex-shrink: 0;
+  padding-bottom: var(--safe-bottom);
+}
+.nav-item {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none; background: none;
+  padding: 8px 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item:active { background: var(--gray-50); }
+.nav-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-icon svg { width: 22px; height: 22px; stroke: var(--gray-400); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.15s; }
+.nav-label {
+  font-size: 10px; font-weight: 500;
+  color: var(--gray-400);
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.nav-item.active .nav-icon svg { stroke: var(--accent); }
+.nav-item.active .nav-label { color: var(--accent); }
 
-    var data = hoja.getDataRange().getValues();
-    var headers = data[0];
-    var iEmail    = headers.indexOf('email');
-    var iRol      = headers.indexOf('rol');
-    var iActivo   = headers.indexOf('activo');
-    var iNombre   = headers.indexOf('nombre');
-    var iPassword = headers.indexOf('password');
-
-    for (var i = 1; i < data.length; i++) {
-      var rowEmail = String(data[i][iEmail]).toLowerCase().trim();
-      if (rowEmail !== email.toLowerCase().trim()) continue;
-
-      // Verificar activo
-      if (data[i][iActivo] !== true && data[i][iActivo] !== 'TRUE' && data[i][iActivo] !== true) {
-        return { ok: false, error: 'Usuario inactivo. Contactá al administrador.' };
-      }
-
-      // Verificar contraseña
-      var rowPass = String(data[i][iPassword]).trim();
-      if (rowPass !== password) {
-        return { ok: false, error: 'Contraseña incorrecta' };
-      }
-
-      return {
-        ok: true,
-        user: {
-          email:   rowEmail,
-          name:    data[i][iNombre] || rowEmail.split('@')[0],
-          picture: null,
-          role:    data[i][iRol] || 'viewer',
-        }
-      };
-    }
-    return { ok: false, error: 'Email no encontrado. Verificá que tenés acceso al sistema.' };
-  } catch(e) {
-    return { ok: false, error: 'Error al verificar: ' + e.message };
-  }
+/* ── INSTALL BANNER ── */
+#install-banner {
+  display: none;
+  background: var(--accent);
+  color: white;
+  padding: 10px 16px;
+  font-size: 13px;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#install-banner.show { display: flex; }
+.install-text { flex: 1; line-height: 1.4; }
+.install-text strong { font-weight: 600; display: block; }
+.btn-install {
+  background: white; color: var(--accent);
+  border: none; border-radius: 6px;
+  padding: 6px 14px; font-family: var(--font);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.btn-dismiss {
+  background: none; border: none; color: rgba(255,255,255,0.6);
+  font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
 }
 
-function getRoleForEmail(email) {
-  try {
-    const hoja = SS.getSheetByName(HOJAS.ROLES);
-    if (!hoja) return null;
-    const data = hoja.getDataRange().getValues();
-    // Columnas: email | rol | activo
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === email && data[i][2] === true) {
-        return data[i][1]; // 'admin' | 'inspector' | 'viewer'
-      }
-    }
-    return null;
-  } catch { return null; }
+/* ── CARD ── */
+.card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.card-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.card-sub { font-size: 13px; color: var(--gray-500); line-height: 1.5; }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px; letter-spacing: 0.04em;
+}
+.b-ok      { background: var(--ok-l); color: var(--ok); }
+.b-warn    { background: var(--warn-l); color: var(--warn); }
+.b-danger  { background: var(--danger-l); color: var(--danger); }
+.b-info    { background: var(--accent-l); color: var(--accent); }
+.b-neutral { background: var(--gray-100); color: var(--gray-500); }
+
+/* ── PÁGINA: INICIO ── */
+.welcome-header {
+  margin-bottom: 20px;
+}
+.welcome-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.welcome-sub { font-size: 14px; color: var(--gray-500); }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r);
+  padding: 14px;
+}
+.stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 6px; }
+.stat-val   { font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 2px; }
+.stat-sub   { font-size: 12px; color: var(--gray-400); }
+.stat-danger .stat-val { color: var(--danger); }
+.stat-warn .stat-val   { color: var(--warn-b); }
+.stat-ok .stat-val     { color: var(--ok-b); }
+
+.section-title {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--gray-400);
+  margin-bottom: 10px; margin-top: 4px;
 }
 
-/* ── Verificar que el usuario tiene el rol mínimo requerido ── */
-function requireRole(email, rolesPermitidos) {
-  const role = getRoleForEmail(email);
-  if (!role || !rolesPermitidos.includes(role)) {
-    throw new Error('Sin permisos para esta operación');
-  }
-  return role;
+.action-list { display: flex; flex-direction: column; gap: 8px; }
+.action-item {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border: 1px solid var(--gray-200);
+  border-radius: var(--r); padding: 14px 16px;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; color: inherit;
 }
-
-/* ══════════════════════════════════════════════════════
-   STATS: métricas del dashboard
-══════════════════════════════════════════════════════ */
-function getStats(email) {
-  requireRole(email, ['admin', 'inspector', 'viewer']);
-
-  const edificiosSheet = SS.getSheetByName(HOJAS.EDIFICIOS);
-  const intSheet = SS.getSheetByName(HOJAS.INTERVENCIONES);
-
-  const edificios = edificiosSheet
-    ? Math.max(0, edificiosSheet.getLastRow() - 1)
-    : 0;
-
-  let imp = 0, intAbiertas = 0, resueltasMes = 0;
-
-  if (intSheet && intSheet.getLastRow() > 1) {
-    const data = intSheet.getDataRange().getValues();
-    const headers = data[0];
-    const idxEstado = headers.indexOf('estado');
-    const idxImp    = headers.indexOf('impide_desarrollo_pedagogico');
-    const idxFin    = headers.indexOf('fecha_fin');
-    const now = new Date();
-    const mesActual = now.getMonth();
-    const anioActual = now.getFullYear();
-
-    for (let i = 1; i < data.length; i++) {
-      const estado = data[i][idxEstado];
-      const impide = data[i][idxImp];
-      const fechaFin = data[i][idxFin];
-
-      if (impide === true || impide === 'true' || impide === 'S') imp++;
-      if (['pendiente','en_analisis','aprobada','en_ejecucion'].includes(estado)) intAbiertas++;
-      if (estado === 'finalizada' && fechaFin) {
-        const f = new Date(fechaFin);
-        if (f.getMonth() === mesActual && f.getFullYear() === anioActual) resueltasMes++;
-      }
-    }
-  }
-
-  return {
-    ok: true,
-    data: { edificios, imp, int: intAbiertas, ok: resueltasMes }
-  };
+.action-item:active { background: var(--gray-50); }
+.action-icon {
+  width: 40px; height: 40px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
+.action-icon svg { width: 22px; height: 22px; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ai-blue   { background: var(--accent-l); }
+.ai-blue svg { stroke: var(--accent); fill: none; }
+.ai-green  { background: var(--ok-l); }
+.ai-green svg { stroke: var(--ok-b); fill: none; }
+.ai-warn   { background: var(--warn-l); }
+.ai-warn svg { stroke: var(--warn-b); fill: none; }
+.ai-gray   { background: var(--gray-100); }
+.ai-gray svg { stroke: var(--gray-500); fill: none; }
+.action-text { flex: 1; }
+.action-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+.action-desc { font-size: 12px; color: var(--gray-400); }
+.action-arrow { color: var(--gray-300); font-size: 18px; }
 
-/* ══════════════════════════════════════════════════════
-   EDIFICIOS: listado y ficha
-══════════════════════════════════════════════════════ */
-function getEdificios(email) {
-  requireRole(email, ['admin', 'inspector', 'viewer']);
-  const role = getRoleForEmail(email);
-
-  const hoja = SS.getSheetByName(HOJAS.EDIFICIOS);
-  if (!hoja || hoja.getLastRow() < 2) return { ok: true, data: [] };
-
-  const data = hoja.getDataRange().getValues();
-  const headers = data[0];
-  const rows = data.slice(1);
-
-  let edificios = rows
-    .filter(r => r[headers.indexOf('activo')] !== false)
-    .map(r => sheetRowToObject(headers, r));
-
-  // Inspectores: filtrar solo sus edificios
-  if (role === 'inspector') {
-    edificios = edificios.filter(e => e.inspector_id === email || e.inspector === email);
-  }
-
-  return { ok: true, data: edificios };
+/* ── PÁGINA: MAPA ── */
+#map-placeholder {
+  background: var(--gray-100);
+  border-radius: var(--r);
+  height: calc(100vh - var(--bar-h) - var(--nav-h) - 32px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px;
+  color: var(--gray-400);
+  text-align: center;
+  border: 1px solid var(--gray-200);
 }
+#map-placeholder svg { width: 48px; height: 48px; stroke: var(--gray-300); fill: none; stroke-width: 1.5; }
+#map-placeholder p { font-size: 14px; }
+#map-placeholder small { font-size: 12px; color: var(--gray-300); }
 
-function getEdificio(id, email) {
-  requireRole(email, ['admin', 'inspector', 'viewer']);
-  if (!id) return { ok: false, error: 'ID requerido' };
-
-  const hoja = SS.getSheetByName(HOJAS.EDIFICIOS);
-  if (!hoja) return { ok: false, error: 'Hoja no encontrada' };
-
-  const data = hoja.getDataRange().getValues();
-  const headers = data[0];
-  const row = data.find(r => String(r[0]) === String(id));
-  if (!row) return { ok: false, error: 'Edificio no encontrado' };
-
-  const edificio = sheetRowToObject(headers, row);
-
-  // Agregar sectores, relevamientos e intervenciones del edificio
-  edificio.sectores      = getSectoresByEdificio(id);
-  edificio.intervenciones = getIntervencionesByEdificio(id, 10);
-
-  return { ok: true, data: edificio };
+/* ── PÁGINA: TABLA ── */
+.search-bar {
+  display: flex; gap: 8px; margin-bottom: 12px;
 }
-
-function getSectoresByEdificio(idEdificio) {
-  return getRelatedRows(HOJAS.SECTORES, 'edificio_id', idEdificio);
+.search-input {
+  flex: 1; border: 1px solid var(--gray-200);
+  border-radius: var(--r); padding: 10px 14px;
+  font-family: var(--font); font-size: 14px;
+  background: white; outline: none;
+  transition: border-color 0.15s;
 }
-
-function getIntervencionesByEdificio(idEdificio, limit) {
-  const rows = getRelatedRows(HOJAS.INTERVENCIONES, 'edificio_id', idEdificio);
-  return limit ? rows.slice(0, limit) : rows;
+.search-input:focus { border-color: var(--accent); }
+.btn-filter {
+  border: 1px solid var(--gray-200); border-radius: var(--r);
+  background: white; padding: 10px 14px;
+  cursor: pointer; display: flex; align-items: center;
+  color: var(--gray-500); font-size: 13px; font-weight: 500; gap: 6px;
 }
+.btn-filter svg { width: 16px; height: 16px; stroke: var(--gray-400); fill: none; stroke-width: 1.8; }
 
-/* ══════════════════════════════════════════════════════
-   RELEVAMIENTO: guardar desde PWA
-══════════════════════════════════════════════════════ */
-function saveRelevamiento(data, email) {
-  requireRole(email, ['admin', 'inspector']);
-
-  const id = 'REL-' + Date.now();
-  const ts = new Date().toISOString();
-
-  /* 1. Guardar relevamiento */
-  appendRow(HOJAS.RELEVAMIENTOS, {
-    id_relevamiento:      id,
-    edificio_id:          data.gestion?.edificio_id || '',
-    fecha:                data.gestion?.fecha_relevamiento || ts,
-    inspector_id:         email,
-    tipo_relevamiento:    'general',
-    observaciones_generales: data.observaciones_generales || '',
-    formulario_pdf:       '',
-    plano_asociado:       '',
-  });
-
-  /* 2. Guardar sectores/observaciones */
-  const sectores = data.sectores || [];
-  sectores.forEach((s, i) => {
-    if (!s.problema) return; // saltar filas vacías
-    const idObs = 'OBS-' + Date.now() + '-' + i;
-    appendRow(HOJAS.OBSERVACIONES, {
-      id_observacion:              idObs,
-      relevamiento_id:             id,
-      sector_id:                   s.sector_id || '',
-      componente:                  s.componente || '',
-      problema_detectado:          s.problema || '',
-      cantidad_total:              s.total || '',
-      cantidad_afectada:           '',
-      porcentaje_funcionamiento:   s.pct_func || '',
-      prioridad_tecnica:           '',
-      impide_desarrollo_pedagogico: s.impide === 'S',
-      justificacion_pedagogica:    data.impacto_pedagogico?.justificacion || '',
-      requiere_intervencion:       s.requiere_intervencion === 'S',
-      tipo_intervencion:           '',
-      observaciones:               '',
-    });
-
-    /* 3. Si requiere intervención, crearla automáticamente */
-    if (s.requiere_intervencion === 'S') {
-      appendRow(HOJAS.INTERVENCIONES, {
-        id_intervencion:             'INT-' + Date.now() + '-' + i,
-        edificio_id:                 data.gestion?.edificio_id || '',
-        relevamiento_id:             id,
-        observacion_id:              idObs,
-        sector_id:                   s.sector_id || '',
-        componente:                  s.componente || '',
-        tipo_intervencion:           '',
-        descripcion_tecnica:         s.problema || '',
-        prioridad_tecnica:           '',
-        impide_desarrollo_pedagogico: s.impide === 'S',
-        estado:                      'pendiente',
-        fecha_creacion:              ts,
-        fecha_inicio:                '',
-        fecha_fin:                   '',
-        responsable_ejecucion:       '',
-        validado_por_inspector:      false,
-      });
-    }
-  });
-
-  /* 4. Historial */
-  appendRow(HOJAS.HISTORIAL, {
-    id_historial:    'HIS-' + Date.now(),
-    edificio_id:     data.gestion?.edificio_id || '',
-    sector_id:       '',
-    observacion_id:  '',
-    intervencion_id: '',
-    fecha:           ts,
-    estado_anterior: '',
-    estado_nuevo:    'relevamiento_cargado',
-    evolucion:       '',
-    observaciones:   'Relevamiento general cargado por ' + email,
-    foto_id:         '',
-    inspector_id:    email,
-  });
-
-  return { ok: true, id, message: 'Relevamiento guardado correctamente' };
+.edificio-item {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border: 1px solid var(--gray-200);
+  border-radius: var(--r); padding: 12px 14px;
+  margin-bottom: 8px; cursor: pointer;
+  transition: background 0.15s;
 }
-
-/* ══════════════════════════════════════════════════════
-   INSPECCIÓN PERIÓDICA
-══════════════════════════════════════════════════════ */
-function saveInspeccion(data, email) {
-  requireRole(email, ['admin', 'inspector']);
-
-  const id = 'INS-' + Date.now();
-  const ts = new Date().toISOString();
-
-  appendRow(HOJAS.RELEVAMIENTOS, {
-    id_relevamiento:      id,
-    edificio_id:          data.edificio_id || '',
-    fecha:                data.fecha || ts,
-    inspector_id:         email,
-    tipo_relevamiento:    'inspeccion_semanal',
-    observaciones_generales: data.observaciones || '',
-    formulario_pdf:       '',
-    plano_asociado:       '',
-  });
-
-  /* Historial de evolución */
-  (data.evoluciones || []).forEach((ev, i) => {
-    appendRow(HOJAS.HISTORIAL, {
-      id_historial:    'HIS-' + Date.now() + '-' + i,
-      edificio_id:     data.edificio_id || '',
-      sector_id:       ev.sector_id || '',
-      observacion_id:  ev.observacion_id || '',
-      intervencion_id: ev.intervencion_id || '',
-      fecha:           ts,
-      estado_anterior: ev.estado_anterior || '',
-      estado_nuevo:    ev.estado_nuevo || '',
-      evolucion:       ev.evolucion || 'sin_cambios', // mejoro | empeoro | sin_cambios
-      observaciones:   ev.observaciones || '',
-      foto_id:         ev.foto_id || '',
-      inspector_id:    email,
-    });
-  });
-
-  return { ok: true, id };
+.edificio-item:active { background: var(--gray-50); }
+.edificio-foto {
+  width: 44px; height: 44px; border-radius: 8px;
+  background: var(--gray-100);
+  flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
 }
+.edificio-foto img { width: 100%; height: 100%; object-fit: cover; }
+.edificio-foto svg { width: 22px; height: 22px; stroke: var(--gray-300); fill: none; stroke-width: 1.5; }
+.edificio-info { flex: 1; min-width: 0; }
+.edificio-nombre { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edificio-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+.edificio-estado { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
-/* ══════════════════════════════════════════════════════
-   INTERVENCIÓN
-══════════════════════════════════════════════════════ */
-function saveIntervencion(data, email) {
-  requireRole(email, ['admin', 'inspector']);
-
-  const ts = new Date().toISOString();
-  const hoja = SS.getSheetByName(HOJAS.INTERVENCIONES);
-  if (!hoja) return { ok: false, error: 'Hoja intervenciones no encontrada' };
-
-  const sheetData = hoja.getDataRange().getValues();
-  const headers = sheetData[0];
-  const idxId = headers.indexOf('id_intervencion');
-  const idxEstado = headers.indexOf('estado');
-
-  /* Buscar la fila de la intervención */
-  for (let i = 1; i < sheetData.length; i++) {
-    if (String(sheetData[i][idxId]) === String(data.id)) {
-      const estadoAnterior = sheetData[i][idxEstado];
-
-      /* Actualizar estado */
-      hoja.getRange(i + 1, idxEstado + 1).setValue(data.estado);
-      if (data.fecha_inicio) hoja.getRange(i + 1, headers.indexOf('fecha_inicio') + 1).setValue(data.fecha_inicio);
-      if (data.fecha_fin)    hoja.getRange(i + 1, headers.indexOf('fecha_fin') + 1).setValue(data.fecha_fin);
-      if (data.responsable)  hoja.getRange(i + 1, headers.indexOf('responsable_ejecucion') + 1).setValue(data.responsable);
-
-      /* Historial */
-      appendRow(HOJAS.HISTORIAL, {
-        id_historial:    'HIS-' + Date.now(),
-        edificio_id:     data.edificio_id || '',
-        sector_id:       '',
-        observacion_id:  '',
-        intervencion_id: data.id,
-        fecha:           ts,
-        estado_anterior: estadoAnterior,
-        estado_nuevo:    data.estado,
-        evolucion:       data.evolucion || '',
-        observaciones:   data.observaciones || '',
-        foto_id:         data.foto_id || '',
-        inspector_id:    email,
-      });
-
-      return { ok: true };
-    }
-  }
-
-  return { ok: false, error: 'Intervención no encontrada' };
+/* ── PERFIL / MENÚ ── */
+.profile-header {
+  background: var(--black); border-radius: var(--r);
+  padding: 20px 16px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 14px;
 }
-
-/* ══════════════════════════════════════════════════════
-   EDIFICIOS: crear
-══════════════════════════════════════════════════════ */
-function createEdificio(data, email) {
-  requireRole(email, ['admin']);
-
-  const id = 'ED-' + Date.now();
-  appendRow(HOJAS.EDIFICIOS, {
-    id_edificio:          id,
-    nombre:               data.nombre || '',
-    numero_establecimiento: data.numero || '',
-    tipo:                 data.tipo || '',
-    nivel:                data.nivel || '',
-    direccion:            data.direccion || '',
-    delegacion:           data.delegacion || '',
-    localidad:            data.localidad || '',
-    latitud:              data.latitud || '',
-    longitud:             data.longitud || '',
-    foto_fachada:         data.foto_fachada || '',
-    etapa_id:             data.etapa_id || '',
-    zona_id:              data.zona_id || '',
-    inspector_id:         data.inspector_id || '',
-    telefono_fijo:        data.telefono || '',
-    email_institucional:  data.email || '',
-    plano_implantacion:   '',
-    plano_edificio:       '',
-    activo:               true,
-  });
-
-  return { ok: true, id };
+.profile-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 600; color: white;
+  overflow: hidden; flex-shrink: 0;
 }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-name { font-size: 16px; font-weight: 600; color: white; }
+.profile-email { font-size: 12px; color: #666; margin-top: 2px; font-family: var(--mono); }
+.profile-role-badge { margin-top: 6px; }
 
-/* ══════════════════════════════════════════════════════
-   ETAPAS
-══════════════════════════════════════════════════════ */
-function getEtapas(email) {
-  requireRole(email, ['admin', 'inspector', 'viewer']);
-  const rows = getRelatedRows(HOJAS.ETAPAS, null, null);
-  return { ok: true, data: rows };
+.menu-section { margin-bottom: 16px; }
+.menu-item {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border: 1px solid var(--gray-200);
+  padding: 14px 16px; cursor: pointer;
+  transition: background 0.15s; color: inherit;
 }
+.menu-item:first-child { border-radius: var(--r) var(--r) 0 0; }
+.menu-item:last-child  { border-radius: 0 0 var(--r) var(--r); }
+.menu-item:only-child  { border-radius: var(--r); }
+.menu-item + .menu-item { border-top: none; }
+.menu-item:active { background: var(--gray-50); }
+.menu-item svg { width: 20px; height: 20px; stroke: var(--gray-400); fill: none; stroke-width: 1.8; flex-shrink: 0; }
+.menu-item-text { flex: 1; font-size: 14px; }
+.menu-item-arrow { color: var(--gray-300); font-size: 16px; }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger svg { stroke: var(--danger); }
 
-/* ══════════════════════════════════════════════════════
-   UTILIDADES INTERNAS
-══════════════════════════════════════════════════════ */
-
-/* Agregar una fila a una hoja en el orden de sus headers */
-function appendRow(nombreHoja, objeto) {
-  const hoja = SS.getSheetByName(nombreHoja);
-  if (!hoja) {
-    Logger.log('Hoja no encontrada: ' + nombreHoja);
-    return;
-  }
-  const headers = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
-  const row = headers.map(h => {
-    const val = objeto[h];
-    return val !== undefined ? val : '';
-  });
-  hoja.appendRow(row);
+/* ── OFFLINE TOAST ── */
+#offline-toast {
+  position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--warn);
+  color: white; border-radius: var(--r);
+  padding: 10px 16px; font-size: 13px; font-weight: 500;
+  display: none; z-index: 200;
+  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
+#offline-toast.show { display: block; }
 
-/* Convertir una fila de Sheets a objeto JS usando los headers */
-function sheetRowToObject(headers, row) {
-  const obj = {};
-  headers.forEach((h, i) => { obj[h] = row[i]; });
-  return obj;
+/* ── SPINNER ── */
+.spinner {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px; color: var(--gray-300);
 }
+.spinner svg { width: 32px; height: 32px; animation: spin 1s linear infinite; stroke: var(--gray-300); fill: none; stroke-width: 2; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Obtener filas relacionadas por un campo */
-function getRelatedRows(nombreHoja, campo, valor) {
-  const hoja = SS.getSheetByName(nombreHoja);
-  if (!hoja || hoja.getLastRow() < 2) return [];
-  const data = hoja.getDataRange().getValues();
-  const headers = data[0];
-  const rows = data.slice(1);
-  if (!campo) return rows.map(r => sheetRowToObject(headers, r));
-  return rows
-    .filter(r => String(r[headers.indexOf(campo)]) === String(valor))
-    .map(r => sheetRowToObject(headers, r));
+/* ── LOADING SCREEN ── */
+#loading-screen {
+  position: fixed; inset: 0;
+  background: var(--black);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
 }
-
-/* ── SETUP INICIAL: crear hojas si no existen ── */
-function setupSheets() {
-  const estructura = {
-    roles:                    ['email','rol','activo','nombre','password'],
-    edificios:                ['id_edificio','nombre','numero_establecimiento','tipo','nivel','direccion','delegacion','localidad','latitud','longitud','foto_fachada','etapa_id','zona_id','inspector_id','telefono_fijo','email_institucional','plano_implantacion','plano_edificio','activo'],
-    etapas:                   ['id_etapa','nombre','descripcion','fecha_inicio','fecha_fin','activa'],
-    zonas:                    ['id_zona','etapa_id','nombre','inspector_id','descripcion'],
-    inspectores:              ['id_inspector','nombre','telefono','email','cargo','activo'],
-    sectores:                 ['id_sector','edificio_id','tipo_sector','identificador','planta','uso','en_uso','observaciones'],
-    contactos_institucionales:['id_contacto','edificio_id','nombre','cargo','telefono_celular','email','es_referente_principal','canal_preferido'],
-    datos_institucionales:    ['id_dato','edificio_id','matricula','secciones','turnos','personal_docente','auxiliares','fecha_actualizacion'],
-    relevamientos:            ['id_relevamiento','edificio_id','fecha','inspector_id','tipo_relevamiento','observaciones_generales','formulario_pdf','plano_asociado'],
-    observaciones_sector:     ['id_observacion','relevamiento_id','sector_id','componente','problema_detectado','cantidad_total','cantidad_afectada','porcentaje_funcionamiento','prioridad_tecnica','impide_desarrollo_pedagogico','justificacion_pedagogica','requiere_intervencion','tipo_intervencion','observaciones'],
-    fotos:                    ['id_foto','edificio_id','relevamiento_id','observacion_id','intervencion_id','tipo_foto','url_drive','fecha','descripcion'],
-    intervenciones:           ['id_intervencion','edificio_id','relevamiento_id','observacion_id','sector_id','componente','tipo_intervencion','descripcion_tecnica','prioridad_tecnica','impide_desarrollo_pedagogico','estado','fecha_creacion','fecha_inicio','fecha_fin','responsable_ejecucion','validado_por_inspector'],
-    historial_estados:        ['id_historial','edificio_id','sector_id','observacion_id','intervencion_id','fecha','estado_anterior','estado_nuevo','evolucion','observaciones','foto_id','inspector_id'],
-    incidencias:              ['id_incidencia','edificio_id','fecha','informada_por','descripcion','sector_id','vinculada_a_observacion','vinculada_a_intervencion','estado'],
-  };
-
-  Object.entries(estructura).forEach(([nombre, headers]) => {
-    let hoja = SS.getSheetByName(nombre);
-    if (!hoja) {
-      hoja = SS.insertSheet(nombre);
-      hoja.appendRow(headers);
-      hoja.getRange(1, 1, 1, headers.length)
-        .setBackground('#0f0f0e')
-        .setFontColor('white')
-        .setFontWeight('bold');
-      Logger.log('Hoja creada: ' + nombre);
-    }
-  });
-
-  Logger.log('Setup completo. Hojas: ' + Object.keys(estructura).join(', '));
+.loading-logo {
+  font-family: var(--mono);
+  font-size: 18px; font-weight: 500;
+  letter-spacing: 0.2em; color: white;
+  text-transform: uppercase;
+  animation: pulse 1.5s ease-in-out infinite;
 }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ── ENDPOINTS ADICIONALES FASE 3 ── */
+/* ── UTILIDADES ── */
+.hidden { display: none !important; }
+.mt-12 { margin-top: 12px; }
+.mb-16 { margin-bottom: 16px; }
+</style>
+</head>
+<body>
 
-// Agregar al switch de doGet:
-// case 'relevamientos_edificio': result = getRelevamientosEdificio(e.parameter.id, email); break;
-// case 'historial_edificio':     result = getHistorialEdificio(e.parameter.id, email); break;
+<!-- v1.1 -->
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-logo">SIIE</div>
+</div>
 
-function getRelevamientosEdificio(id, email) {
-  requireRole(email, ['admin','inspector','viewer']);
-  if (!id) return { ok: false, error: 'ID requerido' };
-  return { ok: true, data: getRelatedRows(HOJAS.RELEVAMIENTOS, 'edificio_id', id) };
-}
+<!-- LOGIN -->
+<div id="login-screen" class="hidden">
+  <div class="login-logo">SIIE · v1.0</div>
+  <div class="login-title">Sistema Integral de Infraestructura Educativa</div>
+  <div class="login-sub">Ingresá con tu email y contraseña institucional</div>
 
-function getHistorialEdificio(id, email) {
-  requireRole(email, ['admin','inspector','viewer']);
-  if (!id) return { ok: false, error: 'ID requerido' };
-  var rows = getRelatedRows(HOJAS.HISTORIAL, 'edificio_id', id);
-  rows.sort(function(a,b){ return new Date(b.fecha) - new Date(a.fecha); });
-  return { ok: true, data: rows };
-}
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;">
+    <input
+      type="email"
+      id="login-email"
+      placeholder="Email institucional"
+      style="background:#1a1a18;border:1px solid #333;border-radius:8px;padding:12px 14px;color:white;font-family:'IBM Plex Sans',sans-serif;font-size:14px;outline:none;width:100%;"
+      onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"
+    >
+    <input
+      type="password"
+      id="login-pass"
+      placeholder="Contraseña"
+      style="background:#1a1a18;border:1px solid #333;border-radius:8px;padding:12px 14px;color:white;font-family:'IBM Plex Sans',sans-serif;font-size:14px;outline:none;width:100%;"
+      onkeydown="if(event.key==='Enter')signIn()"
+    >
+    <div id="login-error" style="display:none;color:#f09595;font-size:12px;text-align:center;padding:4px 0;"></div>
+    <button class="login-btn" onclick="signIn()" id="login-btn">
+      Ingresar al sistema
+    </button>
+  </div>
 
-/* ── DASHBOARD ── */
-function getDashboard(email) {
-  requireRole(email, ['admin','inspector','viewer']);
+  <div class="login-version">SIIE-PWA-001 · v1.0.0 · infraescolar2026.github.io</div>
+</div>
 
-  var edificiosSheet = SS.getSheetByName(HOJAS.EDIFICIOS);
-  var intSheet = SS.getSheetByName(HOJAS.INTERVENCIONES);
-  var relSheet = SS.getSheetByName(HOJAS.RELEVAMIENTOS);
-  var datosSheet = SS.getSheetByName(HOJAS.DATOS_INST);
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <div class="install-text">
+    <strong>Instalá SIIE en tu celular</strong>
+    Acceso rápido sin abrir el navegador
+  </div>
+  <button class="btn-install" onclick="installApp()">Instalar</button>
+  <button class="btn-dismiss" onclick="dismissInstall()">×</button>
+</div>
 
-  var edificios = edificiosSheet ? Math.max(0, edificiosSheet.getLastRow() - 1) : 0;
+<!-- TOP BAR -->
+<div id="topbar" class="hidden">
+  <span class="topbar-logo">SIIE</span>
+  <div class="topbar-sep"></div>
+  <span class="topbar-page" id="topbar-page">Inicio</span>
+  <div class="topbar-user" onclick="navigate('perfil')">
+    <div class="user-avatar" id="user-avatar-top">
+      <span id="user-initials-top">??</span>
+    </div>
+    <span class="role-badge" id="role-badge-top"></span>
+  </div>
+</div>
 
-  // Matrícula total
-  var alumnos = 0;
-  if (datosSheet && datosSheet.getLastRow() > 1) {
-    var datosData = datosSheet.getDataRange().getValues();
-    var idxMat = datosData[0].indexOf('matricula');
-    for (var i = 1; i < datosData.length; i++) {
-      var m = parseInt(datosData[i][idxMat]);
-      if (!isNaN(m)) alumnos += m;
-    }
-  }
+<!-- CONTENIDO -->
+<div id="app-content" class="hidden">
 
-  // Intervenciones
-  var imp = 0, intAbiertas = 0, ok = 0;
-  var estadosCounts = {};
-  var patronesCounts = {};
-  var evolucionMeses = {};
-  var now = new Date();
+  <!-- ── INICIO ── -->
+  <div class="page active" id="page-inicio">
+    <div class="welcome-header">
+      <div class="welcome-title" id="welcome-title">Buen día</div>
+      <div class="welcome-sub" id="welcome-sub">Cargando datos…</div>
+    </div>
 
-  if (intSheet && intSheet.getLastRow() > 1) {
-    var intData = intSheet.getDataRange().getValues();
-    var hInt = intData[0];
-    var iEstado = hInt.indexOf('estado');
-    var iImp    = hInt.indexOf('impide_desarrollo_pedagogico');
-    var iFin    = hInt.indexOf('fecha_fin');
-    var iCreac  = hInt.indexOf('fecha_creacion');
-    var iComp   = hInt.indexOf('componente');
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Edificios</div>
+        <div class="stat-val" id="stat-edificios">—</div>
+        <div class="stat-sub">relevados</div>
+      </div>
+      <div class="stat-card stat-danger">
+        <div class="stat-label">Imp. pedagógico</div>
+        <div class="stat-val" id="stat-imp">—</div>
+        <div class="stat-sub">problemas activos</div>
+      </div>
+      <div class="stat-card stat-warn">
+        <div class="stat-label">Intervenciones</div>
+        <div class="stat-val" id="stat-int">—</div>
+        <div class="stat-sub">abiertas</div>
+      </div>
+      <div class="stat-card stat-ok">
+        <div class="stat-label">Resueltas</div>
+        <div class="stat-val" id="stat-ok">—</div>
+        <div class="stat-sub">este mes</div>
+      </div>
+    </div>
 
-    for (var r = 1; r < intData.length; r++) {
-      var estado = intData[r][iEstado];
-      var impide = intData[r][iImp];
-      var fechaFin = intData[r][iFin];
-      var fechaCreac = intData[r][iCreac];
-      var comp = intData[r][iComp] || 'Sin especificar';
+    <!-- Acciones según rol -->
+    <div class="section-title">Acciones rápidas</div>
+    <div class="action-list" id="action-list"></div>
+  </div>
 
-      if (impide === true || impide === 'true' || impide === 'S') imp++;
-      estadosCounts[estado] = (estadosCounts[estado] || 0) + 1;
-      if (['pendiente','en_analisis','aprobada','en_ejecucion'].includes(estado)) intAbiertas++;
+  <!-- ── MAPA ── -->
+  <div class="page" id="page-mapa">
+    <div id="map-placeholder">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" stroke-width="1"/></svg>
+      <p>Mapa de establecimientos</p>
+      <small>Módulo 2 · Leaflet + OpenStreetMap</small>
+    </div>
+  </div>
 
-      patronesCounts[comp] = (patronesCounts[comp] || 0) + 1;
+  <!-- ── TABLA ── -->
+  <div class="page" id="page-tabla">
+    <div class="search-bar">
+      <input class="search-input" type="text" placeholder="Buscar establecimiento…" oninput="filtrarEdificios(this.value)" id="search-input">
+      <button class="btn-filter" onclick="abrirFiltros()">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        Filtrar
+      </button>
+    </div>
+    <div id="edificios-list">
+      <div class="spinner">
+        <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      </div>
+    </div>
+  </div>
 
-      // Evolución mensual (últimos 6 meses)
-      var fCreac = fechaCreac ? new Date(fechaCreac) : null;
-      if (fCreac) {
-        var mesKey = (fCreac.getMonth() + 1) + '/' + fCreac.getFullYear();
-        if (!evolucionMeses[mesKey]) evolucionMeses[mesKey] = { abiertas: 0, resueltas: 0 };
-        evolucionMeses[mesKey].abiertas++;
-      }
-      if (estado === 'finalizada' && fechaFin) {
-        var fFin = new Date(fechaFin);
-        if (fFin.getMonth() === now.getMonth() && fFin.getFullYear() === now.getFullYear()) ok++;
-        var mesKeyFin = (fFin.getMonth() + 1) + '/' + fFin.getFullYear();
-        if (!evolucionMeses[mesKeyFin]) evolucionMeses[mesKeyFin] = { abiertas: 0, resueltas: 0 };
-        evolucionMeses[mesKeyFin].resueltas++;
-      }
-    }
-  }
+  <!-- ── CARGAR ── -->
+  <div class="page" id="page-cargar">
+    <div class="section-title">Nueva carga</div>
+    <div class="action-list">
+      <div class="action-item" onclick="location.href='relevamiento.html'">
+        <div class="action-icon ai-blue">
+          <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        </div>
+        <div class="action-text">
+          <div class="action-name">Relevamiento general</div>
+          <div class="action-desc">Diagnóstico inicial · primera vez en el edificio</div>
+        </div>
+        <span class="action-arrow">›</span>
+      </div>
+      <div class="action-item" onclick="location.href='inspeccion.html'">
+        <div class="action-icon ai-green">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <div class="action-text">
+          <div class="action-name">Inspección periódica</div>
+          <div class="action-desc">Seguimiento · actualización de estado</div>
+        </div>
+        <span class="action-arrow">›</span>
+      </div>
+      <div class="action-item" onclick="location.href='relevamiento.html'">
+        <div class="action-icon ai-warn">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div class="action-text">
+          <div class="action-name">Intervención</div>
+          <div class="action-desc">Registrar ejecución · fotos antes/después</div>
+        </div>
+        <span class="action-arrow">›</span>
+      </div>
+    </div>
 
-  // Inspecciones este mes
-  var inspMes = 0;
-  if (relSheet && relSheet.getLastRow() > 1) {
-    var relData = relSheet.getDataRange().getValues();
-    var hRel = relData[0];
-    var iFecha = hRel.indexOf('fecha');
-    var iTipo  = hRel.indexOf('tipo_relevamiento');
-    for (var rr = 1; rr < relData.length; rr++) {
-      if (relData[rr][iTipo] === 'inspeccion_semanal') {
-        var fRel = new Date(relData[rr][iFecha]);
-        if (fRel.getMonth() === now.getMonth() && fRel.getFullYear() === now.getFullYear()) inspMes++;
-      }
-    }
-  }
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:6px;">
+      <div class="section-title" style="margin:0;">Borradores guardados</div>
+      <button onclick="borrarTodosBorradores()" style="background:none;border:1px solid var(--gray-200);border-radius:6px;padding:4px 10px;font-family:var(--font);font-size:12px;color:var(--gray-400);cursor:pointer;">Borrar todos</button>
+    </div>
+    <div id="borradores-list">
+      <div class="card">
+        <div class="card-sub" style="text-align:center; padding: 8px 0;">No hay borradores guardados</div>
+      </div>
+    </div>
+  </div>
 
-  // Distribución territorial
-  var territorial = {};
-  var impTerritorial = {};
-  if (edificiosSheet && edificiosSheet.getLastRow() > 1) {
-    var edData = edificiosSheet.getDataRange().getValues();
-    var hEd = edData[0];
-    var iDel = hEd.indexOf('delegacion');
-    var iImpEd = hEd.indexOf('impide_desarrollo_pedagogico');
-    for (var ed = 1; ed < edData.length; ed++) {
-      var del = edData[ed][iDel] || 'Sin delegación';
-      territorial[del] = (territorial[del] || 0) + 1;
-      if (edData[ed][iImpEd] === true || edData[ed][iImpEd] === 'S') {
-        impTerritorial[del] = (impTerritorial[del] || 0) + 1;
-      }
-    }
-  }
+  <!-- ── PERFIL ── -->
+  <div class="page" id="page-perfil">
+    <div class="profile-header">
+      <div class="profile-avatar" id="profile-avatar">
+        <span id="profile-initials">??</span>
+      </div>
+      <div>
+        <div class="profile-name" id="profile-name">Cargando…</div>
+        <div class="profile-email" id="profile-email"></div>
+        <div class="profile-role-badge">
+          <span class="role-badge" id="profile-role-badge"></span>
+        </div>
+      </div>
+    </div>
 
-  // Formatear evolución
-  var evolucionArr = Object.keys(evolucionMeses).slice(-6).map(function(k) {
-    return { mes: k, abiertas: evolucionMeses[k].abiertas, resueltas: evolucionMeses[k].resueltas };
-  });
+    <div class="menu-section">
+      <div class="section-title">Mi cuenta</div>
+      <div class="menu-item" onclick="alert('Próximamente')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="menu-item-text">Mis datos</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+      <div class="menu-item" onclick="alert('Próximamente')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="menu-item-text">Mis edificios asignados</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+    </div>
 
-  // Top 8 patrones
-  var patronesArr = Object.keys(patronesCounts)
-    .map(function(k) {
-      var alerta = patronesCounts[k] >= 3 ? 'Recurrente · revisar mantenimiento preventivo' : null;
-      return { componente: k, count: patronesCounts[k], alerta: alerta };
-    })
-    .sort(function(a,b){ return b.count - a.count; })
-    .slice(0, 8);
+    <div class="menu-section" id="admin-menu" style="display:none;">
+      <div class="section-title">Administración</div>
+      <div class="menu-item" onclick="alert('Próximamente')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span class="menu-item-text">Gestionar usuarios</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+      <div class="menu-item" onclick="alert('Próximamente')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span class="menu-item-text">Gestionar etapas y zonas</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+      <div class="menu-item" onclick="alert('Próximamente')">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="menu-item-text">Exportar datos</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+    </div>
 
-  // Estados
-  var estadosArr = Object.keys(estadosCounts).map(function(k) {
-    return { estado: k, count: estadosCounts[k] };
-  });
+    <div class="menu-section">
+      <div class="section-title">Sistema</div>
+      <div class="menu-item" onclick="alert('Próximamente')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 5.34L3.93 6.75M21 12h-2M5 12H3M19.07 19.07l-1.41-1.41M5.34 18.66l-1.41 1.41M12 21v-2M12 5V3"/></svg>
+        <span class="menu-item-text">Configuración</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+      <div class="menu-item" onclick="verInfoSistema()">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="menu-item-text">Acerca del sistema</span>
+        <span class="menu-item-arrow">›</span>
+      </div>
+      <div class="menu-item danger" onclick="signOut()">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="menu-item-text">Cerrar sesión</span>
+      </div>
+    </div>
 
-  // Territorial
-  var territorialArr = Object.keys(territorial).map(function(k) {
-    return { delegacion: k, count: territorial[k], imp: impTerritorial[k] || 0 };
-  }).sort(function(a,b){ return b.count - a.count; });
+    <div style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--gray-300); margin-top:8px; padding-bottom:8px;">
+      SIIE-PWA-001 · v1.0.0
+    </div>
+  </div>
 
-  return {
-    ok: true,
-    data: {
-      edificios: edificios,
-      alumnos: alumnos,
-      imp: imp,
-      int: intAbiertas,
-      ok: ok,
-      inspecciones: inspMes,
-      evolucion: evolucionArr,
-      estados: estadosArr,
-      patrones: patronesArr,
-      territorial: territorialArr,
-    }
-  };
-}
+</div><!-- /app-content -->
 
-/* ── CORS: responder a solicitudes OPTIONS del navegador ── */
-function doOptions(e) {
-  return ContentService
-    .createTextOutput('')
-    .setMimeType(ContentService.MimeType.TEXT);
-}
+<!-- BOTTOM NAV -->
+<div id="bottom-nav" class="hidden">
+  <button class="nav-item active" id="nav-inicio" onclick="navigate('inicio')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <span class="nav-label">Inicio</span>
+  </button>
+  <button class="nav-item" id="nav-mapa" onclick="navigate('mapa')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    </div>
+    <span class="nav-label">Mapa</span>
+  </button>
+  <button class="nav-item" id="nav-tabla" onclick="navigate('tabla')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    </div>
+    <span class="nav-label">Tabla</span>
+  </button>
+  <button class="nav-item" id="nav-cargar" onclick="navigate('cargar')" id="nav-cargar-btn">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    </div>
+    <span class="nav-label">Cargar</span>
+  </button>
+  <button class="nav-item" id="nav-perfil" onclick="navigate('perfil')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <span class="nav-label">Perfil</span>
+  </button>
+</div>
 
-/* ── GUARDAR RELEVAMIENTO VIA GET (JSONP) ── */
-function saveRelevamientoGET(params, email) {
-  try {
-    var rawData = params.data ? decodeURIComponent(params.data) : null;
-    if (!rawData) return { ok: false, error: 'Sin datos' };
-    var data = JSON.parse(rawData);
-    data.email = email;
-    return saveRelevamiento(data, email);
-  } catch(e) {
-    return { ok: false, error: 'Error al parsear datos: ' + e.message };
-  }
-}
+<!-- OFFLINE TOAST -->
+<div id="offline-toast">Sin conexión · los datos se sincronizarán al reconectar</div>
+
+<script src="app.js"></script>
+</body>
+</html>
