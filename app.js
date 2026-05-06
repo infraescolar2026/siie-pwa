@@ -476,6 +476,14 @@ function cargarBorradores() {
   }).join('');
 }
 
+function borrarTodosBorradores() {
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('siie_borrador_'));
+  if (!keys.length) { alert('No hay borradores guardados'); return; }
+  if (!confirm('¿Borrar ' + keys.length + ' borrador' + (keys.length !== 1 ? 'es' : '') + '?')) return;
+  keys.forEach(k => localStorage.removeItem(k));
+  cargarBorradores();
+}
+
 function abrirBorrador(key) {
   alert(`Abrir borrador: ${key}\n\nRedirige al formulario con datos precargados · próximamente`);
 }
