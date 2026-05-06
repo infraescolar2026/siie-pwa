@@ -958,6 +958,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filas iniciales en la tabla
   for (let i = 0; i < 3; i++) addRow();
 
+  // Fotos de entorno (3 por sección, opcionales)
+  ['calle','luminaria','vereda','recreacion'].forEach(tipo => {
+    for (let i = 0; i < 3; i++) addFotoEntorno(tipo);
+  });
+
   // Fotos otras iniciales
   for (let i = 0; i < 3; i++) addFotoOtra();
 
