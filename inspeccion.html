@@ -147,11 +147,12 @@ select{cursor:pointer;}
   <button class="step-btn active" id="step-btn-1" onclick="irStep(1)">01 Edificio</button>
   <button class="step-btn" id="step-btn-2" onclick="irStep(2)">02 Inspección</button>
   <button class="step-btn" id="step-btn-3" onclick="irStep(3)">03 Evolución</button>
-  <button class="step-btn" id="step-btn-4" onclick="irStep(4)">04 Nuevos</button>
-  <button class="step-btn" id="step-btn-5" onclick="irStep(5)">05 Impacto</button>
-  <button class="step-btn" id="step-btn-6" onclick="irStep(6)">06 Fotos</button>
-  <button class="step-btn" id="step-btn-7" onclick="irStep(7)">07 Observ.</button>
-  <button class="step-btn" id="step-btn-8" onclick="irStep(8)">08 Firma</button>
+  <button class="step-btn" id="step-btn-4" onclick="irStep(4)">04 Entorno</button>
+  <button class="step-btn" id="step-btn-5" onclick="irStep(5)">05 Nuevos</button>
+  <button class="step-btn" id="step-btn-6" onclick="irStep(6)">06 Impacto</button>
+  <button class="step-btn" id="step-btn-7" onclick="irStep(7)">07 Fotos</button>
+  <button class="step-btn" id="step-btn-8" onclick="irStep(8)">08 Observ.</button>
+  <button class="step-btn" id="step-btn-9" onclick="irStep(9)">09 Firma</button>
 </div>
 
 <div class="content">
@@ -274,7 +275,103 @@ select{cursor:pointer;}
 </div>
 
 <!-- ─── STEP 4: NUEVOS PROBLEMAS ─── -->
+
+<!-- ─── STEP 4: ENTORNO ─── -->
 <div id="step-4" style="display:none;">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">04</span>
+      <span class="card-title">Entorno del establecimiento</span>
+      <span class="card-q">¿Cambió algo desde la última visita?</span>
+    </div>
+    <div class="card-body">
+
+      <!-- CALLE -->
+      <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Estado de la calle</div>
+        <div class="fields f1" style="margin-bottom:8px;">
+          <div class="field">
+            <select id="ent-calle-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-calle-obs" placeholder="Observaciones…" style="min-height:52px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="insp-fotos-calle"></div>
+      </div>
+
+      <!-- LUMINARIA -->
+      <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Estado de la luminaria</div>
+        <div class="fields f1" style="margin-bottom:8px;">
+          <div class="field">
+            <select id="ent-luminaria-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option><option>No aplica</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-luminaria-obs" placeholder="Observaciones…" style="min-height:52px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="insp-fotos-luminaria"></div>
+      </div>
+
+      <!-- DISTANCIA A PLAZA -->
+      <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Distancia a espacio público / plaza</div>
+        <div class="fields f2">
+          <div class="field">
+            <input type="number" id="ent-plaza-dist" placeholder="Distancia en metros" min="0">
+          </div>
+          <div class="field">
+            <input type="text" id="ent-plaza-nombre" placeholder="Nombre de la plaza o espacio">
+          </div>
+        </div>
+      </div>
+
+      <!-- VEREDAS -->
+      <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);">
+        <div class="field-label" style="margin-bottom:8px;">Estado de las veredas y comunicación</div>
+        <div class="fields f1" style="margin-bottom:8px;">
+          <div class="field">
+            <select id="ent-vereda-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-vereda-obs" placeholder="Observaciones…" style="min-height:52px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="insp-fotos-vereda"></div>
+      </div>
+
+      <!-- ESPACIO DE RECREACIÓN -->
+      <div>
+        <div class="field-label" style="margin-bottom:8px;">Estado del espacio de recreación / plaza</div>
+        <div class="fields f1" style="margin-bottom:8px;">
+          <div class="field">
+            <select id="ent-recreacion-estado">
+              <option value="">Seleccionar estado…</option>
+              <option>Muy bueno</option><option>Bueno</option><option>Regular</option><option>Malo</option><option>Muy malo</option><option>No existe</option>
+            </select>
+          </div>
+          <div class="field">
+            <textarea id="ent-recreacion-obs" placeholder="Observaciones…" style="min-height:52px;"></textarea>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="insp-fotos-recreacion"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="step-5" style="display:none;">
   <div class="card">
     <div class="card-head">
       <span class="card-num">04</span>
@@ -317,7 +414,7 @@ select{cursor:pointer;}
 </div>
 
 <!-- ─── STEP 5: IMPACTO PEDAGÓGICO ─── -->
-<div id="step-5" style="display:none;">
+<div id="step-6" style="display:none;">
   <div class="card">
     <div class="card-head">
       <span class="card-num">05</span>
@@ -342,7 +439,7 @@ select{cursor:pointer;}
 </div>
 
 <!-- ─── STEP 6: FOTOS ─── -->
-<div id="step-6" style="display:none;">
+<div id="step-7" style="display:none;">
   <div class="card">
     <div class="card-head">
       <span class="card-num">06</span>
@@ -356,7 +453,7 @@ select{cursor:pointer;}
 </div>
 
 <!-- ─── STEP 7: OBSERVACIONES ─── -->
-<div id="step-7" style="display:none;">
+<div id="step-8" style="display:none;">
   <div class="card">
     <div class="card-head">
       <span class="card-num">07</span>
@@ -372,7 +469,7 @@ select{cursor:pointer;}
 </div>
 
 <!-- ─── STEP 8: FIRMA ─── -->
-<div id="step-8" style="display:none;">
+<div id="step-9" style="display:none;">
   <div class="card">
     <div class="card-head">
       <span class="card-num">08</span>
@@ -421,6 +518,42 @@ select{cursor:pointer;}
 
 <script>
 'use strict';
+
+const entornoFotosInsp = {};
+const entornoCountInsp = {};
+
+function addFotoEntornoInsp(tipo) {
+  const prefix = 'insp-fotos-';
+  if (!entornoCountInsp[tipo]) entornoCountInsp[tipo] = 0;
+  entornoCountInsp[tipo]++;
+  const n = entornoCountInsp[tipo];
+  const slotId = `insp-ent-${tipo}-slot-${n}`;
+  const prevId = `insp-ent-${tipo}-prev-${n}`;
+  const div = document.createElement('div');
+  div.innerHTML = `<div class="foto-slot" id="${slotId}" style="aspect-ratio:4/3;">
+    <input type="file" accept="image/*" capture="environment" onchange="onFotoEntornoInsp(this,'${tipo}',${n},'${slotId}','${prevId}')">
+    <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--gray-300);fill:none;stroke-width:1.5;"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span style="font-size:10px;color:var(--gray-400);">Foto ${n}</span>
+    <img style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;display:none;" id="${prevId}" alt="">
+  </div>`;
+  const grid = document.getElementById(prefix + tipo);
+  if (grid) grid.appendChild(div);
+}
+
+function onFotoEntornoInsp(input, tipo, n, slotId, prevId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (!entornoFotosInsp[tipo]) entornoFotosInsp[tipo] = {};
+    entornoFotosInsp[tipo][n] = e.target.result;
+    const img = document.getElementById(prevId);
+    if (img) { img.src = e.target.result; img.style.display = 'block'; }
+    const slot = document.getElementById(slotId);
+    if (slot) slot.classList.add('has-foto');
+  };
+  reader.readAsDataURL(file);
+}
 
 const APPS_SCRIPT_URL_INS = 'https://script.google.com/macros/s/AKfycbxDxiRPFcIgEOpkgGjE23IhDGOtwg_unDfAMPQRBpo0dglkXopT3q8ybb7sWJ6LRyiT4w/exec';
 
@@ -474,7 +607,7 @@ function irStep(n) {
 }
 
 function updateProgress() {
-  const pct = Math.round((currentStep / 8) * 100);
+  const pct = Math.round((currentStep / 9) * 100);
   document.getElementById('progress-fill').style.width = pct + '%';
   // Sincronizar inspector en firma
   const insp = document.getElementById('f-inspector')?.value || '';
@@ -712,6 +845,14 @@ async function enviarInspeccion() {
     impacto_pedagogico: {
       impide:        document.querySelector('input[name="imp_insp"]:checked')?.value || '',
       justificacion: document.getElementById('f-justificacion')?.value || '',
+    },
+    entorno: {
+      calle:      { estado: document.getElementById('ent-calle-estado')?.value || '', obs: document.getElementById('ent-calle-obs')?.value || '' },
+      luminaria:  { estado: document.getElementById('ent-luminaria-estado')?.value || '', obs: document.getElementById('ent-luminaria-obs')?.value || '' },
+      plaza_dist: document.getElementById('ent-plaza-dist')?.value || '',
+      plaza_nombre: document.getElementById('ent-plaza-nombre')?.value || '',
+      vereda:     { estado: document.getElementById('ent-vereda-estado')?.value || '', obs: document.getElementById('ent-vereda-obs')?.value || '' },
+      recreacion: { estado: document.getElementById('ent-recreacion-estado')?.value || '', obs: document.getElementById('ent-recreacion-obs')?.value || '' },
     },
     observaciones: document.getElementById('f-obs')?.value || '',
   };
